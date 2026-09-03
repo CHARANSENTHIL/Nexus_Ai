@@ -1,0 +1,46 @@
+{
+  "name": "Download Organizer",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 12 * * 0" }] }
+      },
+      "name": "Weekly Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/v1/planner/execute",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"goal\": \"Organize the Downloads folder: scan all files, classify them by type (Documents, Images, Videos, Audio, Archives, Code, Other), move each file into its category subfolder, identify and report any duplicate files, and compress files older than 30 days\", \"user_id\": \"n8n_download_organizer\", \"context\": {\"source\": \"n8n\", \"workflow\": \"download_organizer\"}}"
+      },
+      "name": "Call AI Planner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"chat_id\": \"{{$env.TELEGRAM_CHAT_ID}}\", \"text\": \"📁 *Downloads Organized!*\\n\\n\" + $json.result.summary, \"parse_mode\": \"Markdown\"}"
+      },
+      "name": "Notify Complete",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [720, 300]
+    }
+  ],
+  "connections": {
+    "Weekly Trigger": { "main": [[{ "node": "Call AI Planner", "type": "main", "index": 0 }]] },
+    "Call AI Planner": { "main": [[{ "node": "Notify Complete", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}

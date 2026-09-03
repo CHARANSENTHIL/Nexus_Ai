@@ -1,0 +1,70 @@
+{
+  "name": "Security Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "*/30 * * * *" }] }
+      },
+      "name": "Every 30 Min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/v1/planner/execute",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"goal\": \"Run a security scan: list all running processes and flag any suspicious or unknown executables, check for any newly connected USB devices, verify system integrity, check network connections for unusual outbound traffic, and generate a security report\", \"user_id\": \"n8n_security_monitor\", \"context\": {\"source\": \"n8n\", \"workflow\": \"security_monitor\"}}"
+      },
+      "name": "Run Security Scan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.result.summary }}", "operation": "contains", "value2": "suspicious" }]
+        }
+      },
+      "name": "Check for Threats",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"chat_id\": \"{{$env.TELEGRAM_CHAT_ID}}\", \"text\": \"🚨 *Security Alert Detected!*\\n\\n\" + $json.result.summary, \"parse_mode\": \"Markdown\"}"
+      },
+      "name": "Send Security Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {},
+      "name": "No Threats - Skip",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [960, 400]
+    }
+  ],
+  "connections": {
+    "Every 30 Min": { "main": [[{ "node": "Run Security Scan", "type": "main", "index": 0 }]] },
+    "Run Security Scan": { "main": [[{ "node": "Check for Threats", "type": "main", "index": 0 }]] },
+    "Check for Threats": {
+      "main": [
+        [{ "node": "Send Security Alert", "type": "main", "index": 0 }],
+        [{ "node": "No Threats - Skip", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}

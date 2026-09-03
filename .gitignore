@@ -1,0 +1,110 @@
+# ==============================================================================
+# Nexus AI — Git Ignore Configuration
+# ==============================================================================
+
+# ── Python Virtual Environments ───────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ── Python Bytecode & Cache ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ── Environment & Secrets ─────────────────────────────────────────────────────
+# Never commit credentials, API keys, or bot tokens to GitHub!
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+*.env
+!*.env.example
+
+# ── Databases & Vector Store Local Storage ────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+chroma_db/
+.chroma/
+backend/chroma_db/
+
+# ── Local Models & LLM Binaries (Heavy files) ─────────────────────────────────
+models/
+*.bin
+*.gguf
+*.safetensors
+*.pt
+*.onnx
+
+# ── Screenshots & User Uploads (Privacy & Large Binaries) ─────────────────────
+screenshots/
+backend/screenshots/
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+!docs/images/*
+!frontend/public/*
+
+# ── Logs & Test Artifacts ─────────────────────────────────────────────────────
+*.log
+*.log.*
+ollama_diag.log
+test_report.json
+.pytest_cache/
+backend/.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+
+# ── Node / Frontend Dependencies & Builds ─────────────────────────────────────
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+out/
+frontend/out/
+.vercel
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── IDEs & Operating System Artifacts ─────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+.agents/

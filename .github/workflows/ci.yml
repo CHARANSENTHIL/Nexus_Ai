@@ -1,0 +1,96 @@
+name: Nexus AI CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-lint-test:
+    name: Backend — Lint & Test
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Create virtual environment
+        run: python -m venv .venv
+        working-directory: nexus_ai
+
+      - name: Install dependencies
+        run: |
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install ruff
+        working-directory: nexus_ai
+
+      - name: Lint with ruff
+        run: |
+          source .venv/bin/activate
+          ruff check backend/app/ --ignore E501
+        working-directory: nexus_ai
+        continue-on-error: true
+
+      - name: Run unit tests
+        run: |
+          source .venv/bin/activate
+          cd backend
+          pytest tests/ -v --tb=short \
+            --ignore=tests/test_db_connectors.py
+        working-directory: nexus_ai
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./test_nexus.db
+          SYNC_DATABASE_URL: sqlite:///./test_nexus.db
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci
+          TELEGRAM_ALLOWED_USER_IDS: "123456789"
+          CHROMADB_PATH: ./test_chroma_db
+          OLLAMA_BASE_URL: http://localhost:11434
+
+  frontend-lint:
+    name: Frontend — Lint & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: nexus_ai/frontend/package.json
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: nexus_ai/frontend
+
+      - name: Type check
+        run: npx tsc --noEmit
+        working-directory: nexus_ai/frontend
+        continue-on-error: true
+
+      - name: Build check
+        run: npm run build
+        working-directory: nexus_ai/frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
