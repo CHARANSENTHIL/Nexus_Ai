@@ -478,23 +478,33 @@ class LeetCodeAgent:
     """Autonomous agent that resolves, navigates, and submits LeetCode problems."""
 
     @staticmethod
-    async def fetch_online_solution(slug: str) -> Optional[str]:
-        """Fetch verified optimal solution from public repositories."""
+    async def fetch_online_solution(slug: str, number: Optional[int] = None) -> Optional[str]:
+        """Fetch verified optimal solution from multiple public LeetCode repositories."""
         urls = [
             f"https://raw.githubusercontent.com/kamyu104/LeetCode-Solutions/master/Python/{slug}.py",
             f"https://raw.githubusercontent.com/kamyu104/LeetCode-Solutions/master/Python3/{slug}.py",
+            f"https://raw.githubusercontent.com/walkccc/LeetCode/main/solutions/python3/{slug}.py",
         ]
+
+        if number:
+            r_start = (number // 100) * 100
+            r_end = r_start + 99
+            r_str = f"{r_start:04d}-{r_end:04d}"
+            urls.append(f"https://raw.githubusercontent.com/doocs/leetcode/main/solution/{r_str}/{number:04d}.{slug.replace('-', '%20').title()}/Solution.py")
+
         try:
             async with httpx.AsyncClient(timeout=6.0) as client:
                 for u in urls:
-                    r = await client.get(u)
-                    if r.status_code == 200 and "class Solution" in r.text:
-                        # Clean up comment headers
-                        lines = [l for l in r.text.splitlines() if not l.startswith("# Time:") and not l.startswith("# Space:")]
-                        code = "\n".join(lines).strip()
-                        if code:
-                            logger.info(f"[LeetCodeAgent] Found online solution for {slug}")
-                            return code
+                    try:
+                        r = await client.get(u)
+                        if r.status_code == 200 and "class Solution" in r.text:
+                            lines = [l for l in r.text.splitlines() if not l.startswith("# Time:") and not l.startswith("# Space:")]
+                            code = "\n".join(lines).strip()
+                            if code:
+                                logger.info(f"[LeetCodeAgent] Found online solution for {slug} via {u}")
+                                return LeetCodeAgent.modernize_python3(code)
+                    except Exception:
+                        continue
         except Exception as e:
             logger.warning(f"[LeetCodeAgent] Online repo fetch error for {slug}: {e}")
         return None
@@ -579,8 +589,8 @@ class LeetCodeAgent:
         if num in LEETCODE_DATABASE and LEETCODE_DATABASE[num].get("solution"):
             return LeetCodeAgent.modernize_python3(LEETCODE_DATABASE[num]["solution"])
 
-        # 2. Fetch from verified online LeetCode repository
-        online_code = await LeetCodeAgent.fetch_online_solution(slug)
+        # 2. Fetch from verified online LeetCode repositories
+        online_code = await LeetCodeAgent.fetch_online_solution(slug, number=num)
         if online_code:
             return LeetCodeAgent.modernize_python3(online_code)
 
@@ -629,8 +639,6 @@ class LeetCodeAgent:
         words = clean_title.split()
         method_name = (words[0].lower() + "".join(w.capitalize() for w in words[1:])) if words else "solve"
         return f'''class Solution:\n    def {method_name}(self, *args, **kwargs):\n        return True'''
-
-
 
     @staticmethod
     def extract_problems_from_text(text: str, caption: str = "") -> List[Dict[str, Any]]:
@@ -713,18 +721,17 @@ class LeetCodeAgent:
 
         return results
 
-
-
     @staticmethod
     async def fill_and_submit_on_screen(problem: Dict[str, Any]) -> Dict[str, Any]:
         """
         1. Resolve optimal solution
         2. Open problem URL in Chrome
-        3. Wait for page load (4.5s)
-        4. Focus Monaco editor on the right pane
-        5. Copy solution to clipboard, select all (Ctrl+A), paste (Ctrl+V)
-        6. Submit via LeetCode's shortcut (Ctrl+Enter)
-        7. Wait 5s for submission evaluation
+        3. Bring Chrome to foreground
+        4. Wait for page load (4.5s)
+        5. Focus Monaco editor on the right pane
+        6. Copy solution to clipboard, select all (Ctrl+A), paste (Ctrl+V)
+        7. Submit via LeetCode's shortcut (Ctrl+Enter) & Submit button
+        8. Wait 5s for submission evaluation
         """
         try:
             import pyautogui
@@ -741,27 +748,50 @@ class LeetCodeAgent:
             fn = getattr(open_url_in_browser, "func", open_url_in_browser)
             await asyncio.to_thread(fn, url, browser="chrome")
 
-            # 2. Wait for page and Monaco editor to render
+            # 2. Bring Chrome window to foreground
+            try:
+                import win32gui, win32con
+                def enum_win_cb(hwnd, _):
+                    txt = win32gui.GetWindowText(hwnd).lower()
+                    if "chrome" in txt or "leetcode" in txt:
+                        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                        win32gui.SetForegroundWindow(hwnd)
+                        return False
+                    return True
+                win32gui.EnumWindows(enum_win_cb, None)
+            except Exception:
+                pass
+
+            # 3. Wait for page and Monaco editor to render
             await asyncio.sleep(4.5)
 
-            # 3. Calculate editor position (right pane center)
+            # 4. Calculate editor position (right pane)
             sw, sh = pyautogui.size()
-            editor_x = int(sw * 0.70)
-            editor_y = int(sh * 0.45)
+            editor_x = int(sw * 0.72)
+            editor_y = int(sh * 0.38)
 
-            # 4. Copy solution code to clipboard
+            # 5. Copy solution code to clipboard
             pyperclip.copy(solution)
 
-            # 5. Click into editor, select all existing code, paste solution
+            # 6. Click into editor, select all existing code, paste solution
             pyautogui.click(editor_x, editor_y)
-            await asyncio.sleep(0.4)
+            await asyncio.sleep(0.3)
+            pyautogui.click(editor_x, editor_y)
+            await asyncio.sleep(0.3)
             pyautogui.hotkey('ctrl', 'a')
             await asyncio.sleep(0.2)
             pyautogui.hotkey('ctrl', 'v')
             await asyncio.sleep(0.6)
 
-            # 6. Press Ctrl+Enter to trigger LeetCode submission
+            # 7. Trigger LeetCode submission (Ctrl+Enter & click Submit)
             pyautogui.hotkey('ctrl', 'enter')
+            await asyncio.sleep(0.5)
+
+            # Also click the green Submit button in the top navigation bar
+            submit_btn_x = int(sw * 0.49)
+            submit_btn_y = int(sh * 0.12)
+            pyautogui.click(submit_btn_x, submit_btn_y)
+
             await asyncio.sleep(5.0)
 
             return {
@@ -775,3 +805,4 @@ class LeetCodeAgent:
 
 
 leetcode_agent = LeetCodeAgent()
+
