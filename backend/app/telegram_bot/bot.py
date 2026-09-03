@@ -709,9 +709,11 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lower_caption = caption.lower()
         if any(w in lower_caption for w in ("solve", "leetcode", "code", "problem", "solution", "answer")) or "leetcode" in extracted_text.lower():
             from app.agents.leetcode_agent import leetcode_agent
+            await leetcode_agent.load_problem_registry()
             problems = leetcode_agent.extract_problems_from_text(extracted_text, caption=caption)
 
             if problems:
+
                 await send_progress(
                     context.bot, chat_id,
                     f"🎯 *LeetCode Autonomous Solver Active*\nDetected *{len(problems)} problem(s)* from request.\nNavigating to each page, filling the code, submitting, and progressing..."

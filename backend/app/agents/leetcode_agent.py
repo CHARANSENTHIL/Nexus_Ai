@@ -471,11 +471,60 @@ class Solution:
     def xorGame(self, nums: List[int]) -> bool:
         return functools.reduce(operator.xor, nums) == 0 or len(nums) % 2 == 0'''
     },
+    1217: {
+        "title": "Minimum Cost to Move Chips to The Same Position",
+        "slug": "minimum-cost-to-move-chips-to-the-same-position",
+        "difficulty": "Easy",
+        "solution": '''class Solution:
+    def minCostToMoveChips(self, position: List[int]) -> int:
+        odd = sum(p % 2 for p in position)
+        return min(odd, len(position) - odd)'''
+    },
+    1221: {
+        "title": "Split a String in Balanced Strings",
+        "slug": "split-a-string-in-balanced-strings",
+        "difficulty": "Easy",
+        "solution": '''class Solution:
+    def balancedStringSplit(self, s: str) -> int:
+        ans = bal = 0
+        for c in s:
+            bal += 1 if c == 'L' else -1
+            if bal == 0:
+                ans += 1
+        return ans'''
+    },
 }
+
+OFFICIAL_PROBLEM_REGISTRY: Dict[int, Dict[str, str]] = {}
 
 
 class LeetCodeAgent:
     """Autonomous agent that resolves, navigates, and submits LeetCode problems."""
+
+    @classmethod
+    async def load_problem_registry(cls):
+        """Preload official 4000+ problem metadata to guarantee 100% exact slugs."""
+        global OFFICIAL_PROBLEM_REGISTRY
+        if OFFICIAL_PROBLEM_REGISTRY:
+            return
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                r = await client.get("https://leetcode.com/api/problems/all/")
+                if r.status_code == 200:
+                    data = r.json()
+                    for item in data.get("stat_status_pairs", []):
+                        stat = item.get("stat", {})
+                        pid = stat.get("frontend_question_id")
+                        slug = stat.get("question__title_slug")
+                        title = stat.get("question__title")
+                        if pid and slug:
+                            OFFICIAL_PROBLEM_REGISTRY[int(pid)] = {
+                                "slug": slug,
+                                "title": title,
+                            }
+                    logger.info(f"[LeetCodeAgent] Loaded {len(OFFICIAL_PROBLEM_REGISTRY)} official problem definitions")
+        except Exception as e:
+            logger.debug(f"[LeetCodeAgent] Could not preload official registry: {e}")
 
     @staticmethod
     async def fetch_online_solution(slug: str, number: Optional[int] = None) -> Optional[str]:
@@ -485,6 +534,10 @@ class LeetCodeAgent:
             f"https://raw.githubusercontent.com/kamyu104/LeetCode-Solutions/master/Python3/{slug}.py",
             f"https://raw.githubusercontent.com/walkccc/LeetCode/main/solutions/python3/{slug}.py",
         ]
+
+        # Handle legacy slug aliases (e.g. 1217 play-with-chips)
+        if slug == "minimum-cost-to-move-chips-to-the-same-position":
+            urls.append("https://raw.githubusercontent.com/kamyu104/LeetCode-Solutions/master/Python/play-with-chips.py")
 
         if number:
             r_start = (number // 100) * 100
@@ -536,13 +589,15 @@ class LeetCodeAgent:
                 )
                 if r.status_code == 200:
                     data = r.json()
-                    snippets = data.get("data", {}).get("question", {}).get("codeSnippets", [])
+                    q_data = data.get("data", {}).get("question") or {}
+                    snippets = q_data.get("codeSnippets") or []
                     for s in snippets:
                         if s.get("langSlug") == "python3":
                             return s.get("code")
         except Exception as e:
             logger.warning(f"[LeetCodeAgent] GraphQL snippet fetch error for {slug}: {e}")
         return None
+
 
     @staticmethod
     def modernize_python3(code: str) -> str:
@@ -688,7 +743,7 @@ class LeetCodeAgent:
             if not line:
                 continue
 
-            # Match patterns like "805. Split Array With Same Average", "#808 Soup Servings", "810 - Chalkboard"
+            # Match patterns like "1217. Minimum Cost...", "805. Split Array...", "#808 Soup Servings"
             m = re.search(r"(?:#\s*|\b)(\d{1,4})\s*[\.\:\-\s]\s*([a-zA-Z0-9\s\-']+)", line)
             if not m:
                 # Secondary pattern: standalone number followed by words
@@ -700,26 +755,39 @@ class LeetCodeAgent:
                     continue
 
                 raw_title = m.group(2).strip()
-                clean_title = re.split(r"(\d+\.\d+%|Med\.|Easy|Hard|Accepted|Locked|\n)", raw_title, flags=re.IGNORECASE)[0].strip()
-                if len(clean_title) < 2:
+                # Aggressively strip acceptance rates like 73.1%, 73%, 73, and difficulty tags
+                clean_title = re.split(r"(\b\d{1,3}(?:\.\d+)?%?\b|\b(?:Easy|Med|Medium|Hard|Accepted|Locked)\b|\n)", raw_title, flags=re.IGNORECASE)[0].strip()
+                clean_title = re.sub(r"\s+\d+$", "", clean_title).strip()
+
+                if len(clean_title) < 2 and num not in OFFICIAL_PROBLEM_REGISTRY and num not in LEETCODE_DATABASE:
                     continue
 
-                slug = LEETCODE_DATABASE.get(num, {}).get("slug")
-                if not slug:
+                # 1. First priority: Check official LeetCode registry
+                if num in OFFICIAL_PROBLEM_REGISTRY:
+                    slug = OFFICIAL_PROBLEM_REGISTRY[num]["slug"]
+                    title = OFFICIAL_PROBLEM_REGISTRY[num]["title"]
+                # 2. Second priority: Check known database
+                elif num in LEETCODE_DATABASE:
+                    slug = LEETCODE_DATABASE[num]["slug"]
+                    title = LEETCODE_DATABASE[num]["title"]
+                # 3. Fallback: slugify cleaned title
+                else:
                     slug = re.sub(r"[^a-z0-9]+", "-", clean_title.lower()).strip("-")
+                    title = clean_title
 
                 sol = LEETCODE_DATABASE.get(num, {}).get("solution")
 
                 seen.add(num)
                 results.append({
                     "number": num,
-                    "title": LEETCODE_DATABASE.get(num, {}).get("title", clean_title),
+                    "title": title,
                     "slug": slug,
                     "difficulty": LEETCODE_DATABASE.get(num, {}).get("difficulty", "Medium"),
                     "solution": sol,
                 })
 
         return results
+
 
     @staticmethod
     async def fill_and_submit_on_screen(problem: Dict[str, Any]) -> Dict[str, Any]:
