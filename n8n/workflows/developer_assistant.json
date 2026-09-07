@@ -1,0 +1,94 @@
+{
+  "name": "Developer Assistant & GitHub Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "github-issue",
+        "options": {}
+      },
+      "id": "webhook-github",
+      "name": "GitHub Issue Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/n8n/webhook/github-event",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"action\": \"{{ $json.body.action || 'opened' }}\",\n  \"issue\": {{ JSON.stringify($json.body.issue || {}) }},\n  \"repository\": {{ JSON.stringify($json.body.repository || {}) }}\n}"
+      },
+      "id": "forward-to-ai-core",
+      "name": "Forward to AI Core EventBus",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/n8n/pc/execute",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"action\": \"open_app\",\n  \"target\": \"code\"\n}"
+      },
+      "id": "open-vscode",
+      "name": "Open VS Code on PC",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=💻 *Developer Workflow Triggered*\n\nIssue: {{ $node['GitHub Issue Webhook'].json.body.issue.title }}\nRepository: {{ $node['GitHub Issue Webhook'].json.body.repository.full_name }}\n\nVS Code initialized on developer workstation.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-dev-notify",
+      "name": "Notify Developer on Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "GitHub Issue Webhook": {
+      "main": [
+        [
+          {
+            "node": "Forward to AI Core EventBus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forward to AI Core EventBus": {
+      "main": [
+        [
+          {
+            "node": "Open VS Code on PC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open VS Code on PC": {
+      "main": [
+        [
+          {
+            "node": "Notify Developer on Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

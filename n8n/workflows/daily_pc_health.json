@@ -1,0 +1,132 @@
+{
+  "name": "Daily PC Intelligence Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-1",
+      "name": "Schedule Trigger (8 AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/n8n/pc/health",
+        "method": "POST",
+        "options": {}
+      },
+      "id": "http-pc-health",
+      "name": "Fetch PC Health Telemetry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.is_abnormal }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-abnormal",
+      "name": "Is Telemetry Abnormal?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/n8n/agent/analyze",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"context_type\": \"pc_health\",\n  \"data\": {{ JSON.stringify($json) }}\n}"
+      },
+      "id": "ai-diagnostics",
+      "name": "AI Diagnostic Engine",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=🖥️ *Daily PC Health Report*\n\nCPU: {{ $json.cpu_percent }}%\nRAM: {{ $json.ram_percent }}%\nDisk: {{ $json.disk_percent }}%\n\nStatus: {{ $json.status.toUpperCase() }}\n\n{{ $json.warnings.length > 0 ? '⚠️ *Warnings:*\\n' + $json.warnings.join('\\n') : '✅ All systems operating normally.' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-alert",
+      "name": "Send Telegram Summary",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (8 AM)": {
+      "main": [
+        [
+          {
+            "node": "Fetch PC Health Telemetry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch PC Health Telemetry": {
+      "main": [
+        [
+          {
+            "node": "Is Telemetry Abnormal?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Telemetry Abnormal?": {
+      "main": [
+        [
+          {
+            "node": "AI Diagnostic Engine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Telegram Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Diagnostic Engine": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

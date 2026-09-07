@@ -124,6 +124,7 @@ app.add_middleware(
 )
 
 from app.api import vision_api
+from app.api import n8n_integration
 
 # Routers
 app.include_router(digital_twin.router, prefix=settings.API_V1_STR, tags=["Digital Twin"])
@@ -131,6 +132,8 @@ app.include_router(planner_api.router, prefix=settings.API_V1_STR, tags=["Planne
 app.include_router(metrics_api.router, prefix=settings.API_V1_STR, tags=["Metrics"])
 app.include_router(vision_api.router, prefix=settings.API_V1_STR, tags=["Vision"])
 app.include_router(events_api.router, prefix=settings.API_V1_STR, tags=["Events & Timeline"])
+app.include_router(n8n_integration.router, prefix=f"{settings.API_V1_STR}/n8n", tags=["n8n Automation"])
+
 
 
 

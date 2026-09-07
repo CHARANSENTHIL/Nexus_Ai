@@ -1,0 +1,94 @@
+{
+  "name": "PC Incident Response & Auto-Recovery",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "incident-response",
+        "options": {}
+      },
+      "id": "webhook-incident",
+      "name": "Process Crash / Redis Event Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/n8n/agent/analyze",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"context_type\": \"incident\",\n  \"data\": {{ JSON.stringify($json.body || $json) }}\n}"
+      },
+      "id": "ai-root-cause",
+      "name": "AI Root Cause Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/n8n/pc/execute",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"action\": \"run_command\",\n  \"target\": \"tasklist\"\n}"
+      },
+      "id": "pc-recover",
+      "name": "Trigger Recovery Action",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=🚨 *Incident Detected & Handled*\n\nSummary: {{ $node['AI Root Cause Analysis'].json.summary }}\nSeverity: {{ $node['AI Root Cause Analysis'].json.severity }}\n\nAction Output: {{ $json.output }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-incident-alert",
+      "name": "Send Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Process Crash / Redis Event Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Root Cause Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Root Cause Analysis": {
+      "main": [
+        [
+          {
+            "node": "Trigger Recovery Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Recovery Action": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

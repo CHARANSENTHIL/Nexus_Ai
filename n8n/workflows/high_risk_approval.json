@@ -1,0 +1,69 @@
+{
+  "name": "High-Risk Action Human-in-the-Loop Approval",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "high-risk-approval",
+        "options": {}
+      },
+      "id": "webhook-approval",
+      "name": "Approval Request Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=⚠️ *Security Approval Required*\n\nAction: `{{ $json.body.action }}`\nTarget: `{{ $json.body.target }}`\nRisk Level: *{{ $json.body.risk_level }}*\nReason: {{ $json.body.reason }}\n\nTask ID: `{{ $json.body.task_id }}`\n\nPlease approve or deny this execution in your Nexus control center.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-approval-prompt",
+      "name": "Send Approval Prompt to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/n8n/approval/response",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"task_id\": \"{{ $node['Approval Request Webhook'].json.body.task_id }}\",\n  \"approved\": true,\n  \"approved_by\": \"telegram_admin\"\n}"
+      },
+      "id": "forward-approval-decision",
+      "name": "Forward Decision to AI Core",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Approval Request Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send Approval Prompt to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Approval Prompt to Telegram": {
+      "main": [
+        [
+          {
+            "node": "Forward Decision to AI Core",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
