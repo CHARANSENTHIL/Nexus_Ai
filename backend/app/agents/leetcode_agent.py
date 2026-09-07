@@ -816,19 +816,30 @@ class LeetCodeAgent:
             fn = getattr(open_url_in_browser, "func", open_url_in_browser)
             await asyncio.to_thread(fn, url, browser="chrome")
 
-            # 2. Bring Chrome window to foreground
+            # 2. Bring Chrome window to foreground (keep maximized, never shrink/minimize)
             try:
                 import win32gui, win32con
                 def enum_win_cb(hwnd, _):
+                    if not win32gui.IsWindowVisible(hwnd):
+                        return True
                     txt = win32gui.GetWindowText(hwnd).lower()
-                    if "chrome" in txt or "leetcode" in txt:
-                        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-                        win32gui.SetForegroundWindow(hwnd)
+                    if ("chrome" in txt or "leetcode" in txt) and len(txt) > 3:
+                        placement = win32gui.GetWindowPlacement(hwnd)
+                        # If minimized, maximize it. If already maximized/visible, keep it maximized
+                        if placement[1] == win32con.SW_SHOWMINIMIZED:
+                            win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
+                        else:
+                            win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+                        try:
+                            win32gui.SetForegroundWindow(hwnd)
+                        except Exception:
+                            pass
                         return False
                     return True
                 win32gui.EnumWindows(enum_win_cb, None)
             except Exception:
                 pass
+
 
             # 3. Wait for page and Monaco editor to render
             await asyncio.sleep(4.5)
