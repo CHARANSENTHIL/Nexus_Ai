@@ -12,7 +12,8 @@ if backend_path not in sys.path:
 os.environ["PYTHONPATH"] = backend_path + (os.pathsep + os.environ.get("PYTHONPATH", "") if "PYTHONPATH" in os.environ else "")
 
 if __name__ == "__main__":
-    print(f"🚀 Starting Nexus AI Backend with app_dir={backend_path}")
+    print(f"Starting Nexus AI Backend with app_dir={backend_path}")
+    os.chdir(backend_path)
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",

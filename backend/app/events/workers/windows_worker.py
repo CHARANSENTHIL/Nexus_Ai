@@ -28,8 +28,8 @@ class WindowsWorker(AgentWorker):
 
     async def handle_event(self, event: NexusEvent) -> List[NexusEvent]:
         domain = event.payload.get("domain", "pc_tools")
-        if domain not in ("pc_tools", "coding"):
-            # Not a Windows/PC action (handled by Browser/Vision worker)
+        if domain not in ("pc_tools", "coding", "chat"):
+            # Not a Windows/PC/Chat action (handled by Browser/Vision worker)
             return []
 
         action = event.payload.get("action", "")
@@ -41,6 +41,51 @@ class WindowsWorker(AgentWorker):
         fn = registry.get(action)
 
         logger.info(f"[WindowsWorker] ⚙️ Executing action '{action}' with input: {tool_input}")
+
+        # ── Conversational Chat Action ──────────────────────────────────────────
+        if action == "chat_response" or domain == "chat":
+            prompt = tool_input.get("prompt", "") if isinstance(tool_input, dict) else str(tool_input)
+            from app.agents.chat_agent import chat_agent
+            user_name = event.user_id if event.user_id != "system" else "User"
+            chat_text = await chat_agent.generate_response(prompt, user_name=user_name)
+
+            if any(w in prompt.lower() for w in ("hi", "hello", "hey", "hola", "greetings")):
+                if "offline" in chat_text.lower():
+                    chat_text = (
+                        "👋 Hello! I am **Nexus AI**, your autonomous desktop assistant.\n\n"
+                        "How can I help you today? You can ask me to:\n"
+                        "- Open apps or browse websites (`open chrome and search YouTube`)\n"
+                        "- Solve LeetCode problems from screenshots\n"
+                        "- Check system health, CPU/RAM/Disk, and manage background tasks"
+                    )
+
+            duration_ms = (time.time() - start_time) * 1000
+            completed_payload = ActionCompletedPayload(
+                action=action,
+                result=chat_text,
+                success=True,
+                duration_ms=duration_ms,
+                subtask_index=subtask_idx,
+            )
+            comp_evt = NexusEvent(
+                event_type=EventType.ACTION_COMPLETED,
+                task_id=event.task_id,
+                user_id=event.user_id,
+                source_agent=self.name,
+                payload=completed_payload.model_dump(),
+            )
+            await task_tracker.update_task_from_event(comp_evt)
+
+            task_comp_evt = NexusEvent(
+                event_type=EventType.TASK_COMPLETED,
+                task_id=event.task_id,
+                user_id=event.user_id,
+                source_agent=self.name,
+                payload={"final_output": chat_text},
+            )
+            await task_tracker.update_task_from_event(task_comp_evt)
+            return [comp_evt, task_comp_evt]
+
 
         # ── Shell Execution with Self-Healing ──────────────────────────────────
         if action == "run_shell_command":

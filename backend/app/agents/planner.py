@@ -118,7 +118,27 @@ class IntentRouter:
         if _is_compound_goal(g):
             return None
 
+        # ── Greetings / Conversational Chat (instant, 0ms) ──
+        greetings = (
+            "hi", "hello", "hey", "hola", "hi nexus", "hello nexus", "hey nexus",
+            "greetings", "good morning", "good evening", "good afternoon",
+            "who are you", "what can you do", "help", "howdy", "yo", "sup", "hlo"
+        )
+        if g in greetings or any(g.startswith(x + " ") for x in ("hi", "hello", "hey", "hola", "greetings")):
+            return [{
+                "id": "task_1",
+                "title": "Reply to Greeting",
+                "description": "Send friendly conversational greeting and capabilities",
+                "agent": "chat",
+                "tool": "chat_response",
+                "tool_input": {"prompt": goal},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            }]
+
         # ── Screenshot / Vision ──
+
         if any(w in g for w in ("screenshot", "screen shot", "capture screen", "snap screen")):
             tasks = [{"id": "task_1", "title": "Take screenshot", "description": "Capture screen",
                        "agent": "vision", "tool": "take_screenshot", "tool_input": {},
