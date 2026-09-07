@@ -164,14 +164,22 @@ class RedisEventBus:
         while stop_event is None or not stop_event.is_set():
             try:
                 if self.is_connected:
-                    # Read from Redis Consumer Group
-                    entries = await self._redis.xreadgroup(
-                        groupname=group_name,
-                        consumername=consumer_name,
-                        streams={stream_name: ">"},
-                        count=10,
-                        block=int(poll_interval * 1000),
-                    )
+                    # Read from Redis Consumer Group with auto-recovery
+                    try:
+                        entries = await self._redis.xreadgroup(
+                            groupname=group_name,
+                            consumername=consumer_name,
+                            streams={stream_name: ">"},
+                            count=10,
+                            block=int(poll_interval * 1000),
+                        )
+                    except Exception as xrg_err:
+                        if "NOGROUP" in str(xrg_err):
+                            await self.ensure_group(stream_name, group_name)
+                            await asyncio.sleep(0.5)
+                            continue
+                        raise xrg_err
+
                     if entries:
                         for stream, msg_list in entries:
                             for msg_id, fields in msg_list:
@@ -197,12 +205,12 @@ class RedisEventBus:
                     else:
                         await asyncio.sleep(poll_interval)
 
-
             except asyncio.CancelledError:
                 break
             except Exception as loop_err:
                 logger.error(f"[EventBus] Listener loop error on {stream_name}: {loop_err}")
                 await asyncio.sleep(1.0)
+
 
     async def get_task_timeline(self, task_id: str) -> List[NexusEvent]:
         """Get the full chronological event timeline for a specific task."""

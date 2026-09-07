@@ -86,24 +86,40 @@ async def lifespan(app: FastAPI):
 
 
 async def _run_telegram(tg_app):
-    """Run Telegram bot polling in the background with single-instance protection."""
+    """Run Telegram bot polling in the background with single-instance protection and auto-reconnect."""
     from app.telegram_bot.bot import acquire_bot_lock
     if not acquire_bot_lock():
         logger.info("[Telegram] Another instance is already running — skipping duplicate bot startup.")
         return
 
-    try:
-        await tg_app.initialize()
-        await tg_app.start()
-        await tg_app.updater.start_polling(drop_pending_updates=True)
-        await stop_event.wait()
-        await tg_app.updater.stop()
-        await tg_app.stop()
-        await tg_app.shutdown()
-    except asyncio.CancelledError:
-        pass
-    except Exception as e:
-        logger.error(f"Telegram bot error: {e}")
+    while not stop_event.is_set():
+        try:
+            await tg_app.initialize()
+            await tg_app.start()
+            await tg_app.updater.start_polling(drop_pending_updates=True)
+            logger.info("Telegram bot polling started successfully.")
+            await stop_event.wait()
+            await tg_app.updater.stop()
+            await tg_app.stop()
+            await tg_app.shutdown()
+            break
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.warning(f"[Telegram] Connection/Network error: {e}. Retrying in 5s...")
+            try:
+                if tg_app.updater and tg_app.updater.running:
+                    await tg_app.updater.stop()
+                if tg_app.running:
+                    await tg_app.stop()
+                await tg_app.shutdown()
+            except Exception:
+                pass
+            try:
+                await asyncio.wait_for(stop_event.wait(), timeout=5.0)
+            except asyncio.TimeoutError:
+                pass
+
 
 
 
