@@ -771,11 +771,65 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_progress(context.bot, chat_id, f"❌ Failed to process uploaded image: {str(e)[:200]}")
 
 
+# ── Voice Note Handler ────────────────────────────────────────────────────────
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handles incoming voice notes and audio clips from Telegram."""
+    user = update.effective_user
+    if not user or not is_allowed(user.id):
+        await update.message.reply_text("🚫 Access denied.")
+        return
+
+    chat_id = update.effective_chat.id
+    voice = update.message.voice or update.message.audio
+    if not voice:
+        return
+
+    await context.bot.send_chat_action(chat_id=chat_id, action="record_voice")
+
+    temp_audio = tempfile.mktemp(suffix=".oga")
+    try:
+        new_file = await voice.get_file()
+        await new_file.download_to_drive(custom_path=temp_audio)
+
+        # Transcribe voice audio
+        from app.voice.transcriber import transcriber
+        trans_res = await transcriber.transcribe_file(temp_audio)
+
+        if not trans_res.get("success"):
+            err = trans_res.get("error", "Could not understand audio")
+            await send_progress(context.bot, chat_id, f"⚠️ *Voice Transcription Failed*\n{err}")
+            return
+
+        spoken_text = trans_res.get("text", "").strip()
+        logger.info(f"[BOT] Transcribed Telegram voice note from {user.id}: '{spoken_text}'")
+
+        await send_progress(
+            context.bot, chat_id,
+            f"🎙️ *Heard Voice Command:*\n`\"{spoken_text}\"`\n\nExecuting..."
+        )
+
+        # Inject transcribed text into message and forward through full execution pipeline
+        update.message.text = spoken_text
+        await handle_message(update, context)
+
+    except Exception as e:
+        logger.error(f"[BOT] Voice handling error: {e}", exc_info=True)
+        await send_progress(context.bot, chat_id, f"❌ Failed to process voice note: {str(e)[:200]}")
+    finally:
+        if os.path.exists(temp_audio):
+            try:
+                os.remove(temp_audio)
+            except Exception:
+                pass
+
+
 # ── Bot builder ───────────────────────────────────────────────────────────────
 def build_telegram_app(token: str) -> Application:
     app = Application.builder().token(token).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, handle_voice))
     app.add_handler(CallbackQueryHandler(handle_callback))
     return app
+
 

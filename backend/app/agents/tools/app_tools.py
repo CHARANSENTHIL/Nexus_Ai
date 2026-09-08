@@ -450,3 +450,41 @@ public class Audio {{
         return {"success": False, "error": result.stderr[:300] if result.stderr else "PowerShell volume control failed"}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+@tool
+def send_intelligent_email(prompt: str) -> Dict[str, Any]:
+    """
+    Intelligently drafts an email, discovers relevant local attachments, and dispatches via n8n Gmail workflow.
+    Requires security approval for high-risk operations.
+    """
+    import asyncio
+    import concurrent.futures
+    from app.agents.email_workflow import email_agent
+
+    async def _execute():
+        draft = await email_agent.plan_and_draft_email(prompt)
+        res = await email_agent.dispatch_to_n8n(draft)
+        return {
+            "success": res.get("success", True),
+            "recipient": draft.get("to"),
+            "subject": draft.get("subject"),
+            "attachments": draft.get("attachment_names", []),
+            "message": res.get("message", "Email workflow completed."),
+        }
+
+    try:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(asyncio.run, _execute()).result()
+        else:
+            return asyncio.run(_execute())
+    except Exception as e:
+        return {"success": False, "error": f"Email workflow error: {e}"}
+
+

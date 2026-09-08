@@ -1,0 +1,72 @@
+{
+  "name": "Gmail Intelligent Send & Notify Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-email",
+        "options": {}
+      },
+      "id": "webhook-send-email",
+      "name": "Webhook: Receive Email Payload",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "toList": "={{ $json.body.to }}",
+        "subject": "={{ $json.body.subject }}",
+        "message": "={{ $json.body.body }}",
+        "options": {
+          "attachments": "={{ $json.body.attachments }}"
+        }
+      },
+      "id": "gmail-send-node",
+      "name": "Gmail: Send Email & Attachments",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=✅ *Email Sent Successfully via n8n*\n\n📧 *Recipient:* `{{ $node['Webhook: Receive Email Payload'].json.body.to }}`\n📝 *Subject:* {{ $node['Webhook: Receive Email Payload'].json.body.subject }}\n📎 *Attachments:* {{ $node['Webhook: Receive Email Payload'].json.body.attachments.length || 0 }} file(s)\n\n🕒 *Timestamp:* {{ $node['Webhook: Receive Email Payload'].json.body.timestamp }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-email-confirm",
+      "name": "Telegram: Send Confirmation Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [720, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Receive Email Payload": {
+      "main": [
+        [
+          {
+            "node": "Gmail: Send Email & Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail: Send Email & Attachments": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Send Confirmation Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

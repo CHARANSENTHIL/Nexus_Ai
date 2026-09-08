@@ -137,7 +137,23 @@ class IntentRouter:
                 "requires_approval": False,
             }]
 
+        # ── Email / n8n Workflow (instant) ──
+        if any(w in g for w in ("send email", "send an email", "send my project", "send the report", "send report to", "mail my", "email to", "send update to", "send my report", "send project report")):
+            return [{
+                "id": "task_1",
+                "title": "Prepare and Send Email",
+                "description": f"Draft context-aware email and dispatch via n8n: {goal}",
+                "agent": "email",
+                "tool": "send_intelligent_email",
+                "tool_input": {"prompt": goal},
+                "dependencies": [],
+                "risk_level": "medium",
+                "requires_approval": True,
+            }]
+
+
         # ── Screenshot / Vision ──
+
 
         if any(w in g for w in ("screenshot", "screen shot", "capture screen", "snap screen")):
             tasks = [{"id": "task_1", "title": "Take screenshot", "description": "Capture screen",
