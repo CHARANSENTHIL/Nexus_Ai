@@ -57,9 +57,10 @@ class RedisEventBus:
                 self.redis_url,
                 encoding="utf-8",
                 decode_responses=True,
-                socket_connect_timeout=1.5,
-                socket_timeout=1.5,
+                socket_connect_timeout=3.0,
+                socket_timeout=None,
             )
+
             await self._redis.ping()
             self._is_redis_available = True
             logger.info(f"[EventBus] Connected to Redis Streams at {self.redis_url}")
@@ -174,11 +175,16 @@ class RedisEventBus:
                             block=int(poll_interval * 1000),
                         )
                     except Exception as xrg_err:
-                        if "NOGROUP" in str(xrg_err):
+                        err_str = str(xrg_err).lower()
+                        if "nogroup" in err_str:
                             await self.ensure_group(stream_name, group_name)
                             await asyncio.sleep(0.5)
                             continue
+                        elif "timeout" in err_str:
+                            # Idle polling timeout is normal on empty stream
+                            continue
                         raise xrg_err
+
 
                     if entries:
                         for stream, msg_list in entries:

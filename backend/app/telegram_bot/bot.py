@@ -343,19 +343,21 @@ async def _execute_subtasks(bot, chat_id, context, user, text, subtasks: list):
 
 
 # ── Message handler ───────────────────────────────────────────────────────────
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE, text_override: Optional[str] = None):
     user = update.effective_user
     if not user or not is_allowed(user.id):
-        await update.message.reply_text("🚫 Access denied.")
+        if update.message:
+            await update.message.reply_text("🚫 Access denied.")
         return
 
     chat_id = update.effective_chat.id
-    text = (update.message.text or "").strip()
+    text = (text_override or (update.message.text if update.message else "") or "").strip()
     if not text:
         return
 
     logger.info(f"[BOT] Message from {user.id}: '{text[:80]}'")
     await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+
 
     # ═══════════════════════════════════════════════════════════════════════════
     # EVENT-DRIVEN ARCHITECTURE (Redis Streams Event Bus)
@@ -810,11 +812,11 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🎙️ *Heard Voice Command:*\n`\"{spoken_text}\"`\n\nExecuting..."
         )
 
-        # Inject transcribed text into message and forward through full execution pipeline
-        update.message.text = spoken_text
-        await handle_message(update, context)
+        # Forward transcribed voice text through the full execution pipeline
+        await handle_message(update, context, text_override=spoken_text)
 
     except Exception as e:
+
         logger.error(f"[BOT] Voice handling error: {e}", exc_info=True)
         await send_progress(context.bot, chat_id, f"❌ Failed to process voice note: {str(e)[:200]}")
     finally:

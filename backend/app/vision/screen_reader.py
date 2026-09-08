@@ -161,7 +161,13 @@ class ScreenReader:
             "full_text": text,
         }
 
+    def find_errors_on_screen(self, screenshot_path: str = None) -> list:
+        """Scan screen and return list of detected error strings."""
+        res = self.find_error(screenshot_path)
+        return res.get("errors", [])
+
     def find_text_on_screen(self, search_text: str, screenshot_path: str = None) -> bool:
+
         """Check if specific text appears on screen."""
         screen_text = self.ocr_screen(screenshot_path)
         return search_text.lower() in screen_text.lower()
