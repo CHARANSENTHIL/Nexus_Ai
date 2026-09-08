@@ -1,13 +1,15 @@
 """
 Real-time Local Microphone Listener for Nexus AI.
-Listens for voice commands from the PC microphone and executes them directly via IntentRouter and ComputerInterface.
+Uses sounddevice & soundfile to record audio without requiring PyAudio/C++ build tools.
 """
+import os
 import asyncio
 import logging
+import tempfile
 from typing import Optional, Callable
 from app.voice.transcriber import transcriber
 from app.voice.tts import tts_engine
-from app.agents.planner import IntentRouter, planner_agent
+from app.agents.planner import IntentRouter
 from app.computer_use.interface import computer
 
 logger = logging.getLogger(__name__)
@@ -21,27 +23,59 @@ class VoiceCommandListener:
         self.is_listening = False
         self._stop_event = asyncio.Event()
 
-    async def listen_once_from_mic(self, timeout: float = 6.0, phrase_time_limit: float = 8.0) -> Optional[str]:
+    async def record_mic_audio(self, duration: float = 5.0, sample_rate: int = 16000) -> Optional[str]:
         """
-        Records from the default PC microphone and transcribes the speech.
+        Records from default microphone using sounddevice and exports to a temporary WAV file.
         """
-        import speech_recognition as sr
-
-        recognizer = transcriber._get_recognizer()
         try:
-            with sr.Microphone() as source:
-                logger.info("[VoiceListener] 🎙️ Listening for microphone input...")
-                recognizer.adjust_for_ambient_noise(source, duration=0.4)
-                audio_data = recognizer.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
+            import sounddevice as sd
+            import soundfile as sf
+            import numpy as np
 
-            text = recognizer.recognize_google(audio_data)
-            logger.info(f"[VoiceListener] Heard: '{text}'")
-            return text
-        except (sr.WaitTimeoutError, sr.UnknownValueError):
-            return None
+            logger.info(f"[VoiceListener] 🎙️ Recording from microphone ({duration}s)...")
+            recording = await asyncio.to_thread(
+                sd.rec,
+                int(duration * sample_rate),
+                samplerate=sample_rate,
+                channels=1,
+                dtype="int16",
+            )
+            await asyncio.to_thread(sd.wait)
+
+            # Check if volume is above noise threshold
+            max_amp = np.max(np.abs(recording)) if len(recording) > 0 else 0
+            if max_amp < 100:
+                logger.debug("[VoiceListener] Audio too quiet / silence detected.")
+                return None
+
+            tmp_wav = tempfile.mktemp(suffix=".wav")
+            await asyncio.to_thread(sf.write, tmp_wav, recording, sample_rate, format="WAV", subtype="PCM_16")
+            return tmp_wav
         except Exception as e:
-            logger.warning(f"[VoiceListener] Microphone capture error: {e}")
+            logger.warning(f"[VoiceListener] sounddevice recording error: {e}")
             return None
+
+    async def listen_once_from_mic(self, duration: float = 5.0) -> Optional[str]:
+        """
+        Records audio from PC microphone and transcribes it to text.
+        """
+        wav_path = await self.record_mic_audio(duration=duration)
+        if not wav_path or not os.path.exists(wav_path):
+            return None
+
+        try:
+            res = await transcriber.transcribe_file(wav_path)
+            if res.get("success"):
+                text = res.get("text", "").strip()
+                logger.info(f"[VoiceListener] 🎙️ Heard: '{text}'")
+                return text
+            return None
+        finally:
+            if wav_path and os.path.exists(wav_path):
+                try:
+                    os.remove(wav_path)
+                except Exception:
+                    pass
 
     async def process_voice_command(self, text: str) -> str:
         """
@@ -70,13 +104,13 @@ class VoiceCommandListener:
                 if fn:
                     res = await asyncio.to_thread(fn, **tool_input) if isinstance(tool_input, dict) else await asyncio.to_thread(fn, tool_input)
                     out = _format_tool_result(tool_name, res)
-                    tts_engine.speak(out[:150])
+                    await tts_engine.speak_async(out[:150])
                     return out
 
-        # 2. Complex / Conversational Path
+        # 2. Conversational / Complex Path
         from app.agents.chat_agent import chat_agent
         reply = await chat_agent.generate_response(cleaned)
-        tts_engine.speak(reply[:200])
+        await tts_engine.speak_async(reply[:200])
         return reply
 
 
