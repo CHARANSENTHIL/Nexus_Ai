@@ -69,6 +69,10 @@ class NexusRuntime:
         logger.info(f"[Runtime] 🚀 Initialized Task {task.task_id} for user {user_id}")
         await self._emit_progress(task, f"Task created: {goal[:60]}")
 
+        # Initialize Working Memory
+        from app.memory.tiered_memory import tiered_memory
+        tiered_memory.init_working_memory(task.task_id, goal=goal, initial_context=metadata)
+
         # 2. Decompose Goal via Planner (State: PLANNING)
         self.state_machine.transition_state(task, TaskState.PLANNING)
         from app.agents.planner import planner_agent, IntentRouter
@@ -240,10 +244,19 @@ class NexusRuntime:
                 self.state_machine.transition_state(task, TaskState.FAILED, error=subtask.error)
                 return task
 
-        # 4. Final Verification & Completion
+        # 4. Final Verification, Consolidation & Completion
         task.final_output = f"Completed {task.completed_steps_count}/{task.total_steps} steps successfully."
         self.state_machine.transition_state(task, TaskState.COMPLETED)
-        logger.info(f"[Runtime] 🎉 Task {task.task_id} COMPLETED SUCCESSFULLY.")
+        
+        # Consolidate working memory into episodic/semantic
+        tiered_memory.consolidate_task_memory(
+            task_id=task.task_id,
+            goal=task.goal,
+            outcome=task.final_output,
+            subtasks=task.subtasks,
+        )
+
+        logger.info(f"[Runtime] 🎉 Task {task.task_id} COMPLETED & MEMORY CONSOLIDATED.")
         return task
 
 

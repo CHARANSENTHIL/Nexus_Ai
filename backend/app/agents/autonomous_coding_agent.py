@@ -147,25 +147,29 @@ class AutonomousCodingAgent:
                 target_chunk = patch_data.get("target_chunk", "")
                 replacement_chunk = patch_data.get("replacement_chunk", "")
 
-                if not target_chunk or not replacement_chunk:
-                    raise ValueError("Patch output missing target_chunk or replacement_chunk")
+                # Validate patch inside isolated WorkspaceSandbox first
+                from app.sandbox.workspace_sandbox import create_sandbox
+                sandbox = create_sandbox()
+                try:
+                    validation_res = sandbox.validate_patch(
+                        file_path=target_file,
+                        target_chunk=target_chunk,
+                        replacement_chunk=replacement_chunk,
+                    )
+                    if not validation_res.get("success"):
+                        error_context = f"Sandbox validation failed: {validation_res.get('error')}"
+                        logger.warning(f"[CodingAgent] Sandbox diff failed: {error_context}")
+                        continue
+                finally:
+                    sandbox.cleanup()
 
-                # Apply diff
-                diff_res = apply_targeted_diff(
-                    file_path=target_file,
-                    target_chunk=target_chunk,
-                    replacement_chunk=replacement_chunk,
-                )
-
-                if not diff_res.get("success"):
-                    error_context = f"Diff application error: {diff_res.get('error')}"
-                    logger.warning(f"[CodingAgent] Diff failed: {error_context}")
-                    continue
+                # Re-index modified file
+                self.codebase.index_file(target_file)
 
                 # Run tests or syntax check
-                test_res = run_unit_tests(target_file, cwd=self.root_dir)
+                test_res = run_unit_tests.func(target_file, cwd=self.root_dir) if hasattr(run_unit_tests, "func") else run_unit_tests(target_file, cwd=self.root_dir)
                 if test_res.get("success"):
-                    logger.info(f"[CodingAgent] ✅ Tests passed successfully on attempt {attempt}!")
+                    logger.info(f"[CodingAgent] ✅ Sandboxed patch verified & tests passed on attempt {attempt}!")
                     return {
                         "success": True,
                         "file_modified": target_file,
