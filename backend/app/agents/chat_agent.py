@@ -121,6 +121,74 @@ class ChatAgent:
             logger.error(f"[ChatAgent] Stream error: {e}")
             yield self._fallback(prompt, user_name)
 
+    async def stream_code_solution(
+        self,
+        caption: str,
+        extracted_text: str,
+        user_name: str = "Charan"
+    ) -> AsyncGenerator[str, None]:
+        """
+        Stream full competitive coding solutions (CodeChef, LeetCode, Codeforces)
+        using the specialized coding model (Phi-4-mini or Qwen3 4B).
+        """
+        coding_model = getattr(settings, "OLLAMA_CODING_MODEL", "phi4-mini:latest")
+        logger.info(f"[ChatAgent] 💻 Routing coding solution stream to {coding_model}")
+
+        prompt = (
+            f"You are Nexus AI Expert Competitive Programmer assisting {user_name}.\n\n"
+            f"User Goal: {caption or 'Solve the competitive coding problems shown in the image.'}\n\n"
+            f"Extracted Problem Text / Titles from Screenshot:\n{extracted_text}\n\n"
+            "INSTRUCTIONS:\n"
+            "1. For each coding problem identified in the text (e.g. 'TV Discount', 'Broken Phone', 'Tyre problem', 'Sum of Digits', etc.):\n"
+            "   - **Problem Name**: State the problem.\n"
+            "   - **Approach**: 1-2 lines on the optimal algorithm / math logic.\n"
+            "   - **Python 3 Solution**: Full, clean, working Python 3 code with competitive I/O (handling T test cases if applicable).\n"
+            "   - **Complexity**: Time & Space Complexity.\n"
+            "2. Format code cleanly inside Markdown ```python ``` blocks.\n"
+            "3. Do NOT ask for more info or chat — produce the code solutions immediately!"
+        )
+
+        payload = {
+            "model": coding_model,
+            "prompt": prompt,
+            "stream": True,
+            "options": {"temperature": 0.2},
+        }
+
+        full_reply = ""
+        try:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(connect=15.0, read=180.0, write=10.0, pool=5.0)
+            ) as client:
+                async with client.stream(
+                    "POST",
+                    f"{self.ollama_url}/api/generate",
+                    json=payload,
+                ) as response:
+                    response.raise_for_status()
+                    async for line in response.aiter_lines():
+                        if not line.strip():
+                            continue
+                        try:
+                            data = json.loads(line)
+                            token = data.get("response", "")
+                            if token:
+                                full_reply += token
+                                yield token
+                            if data.get("done"):
+                                break
+                        except json.JSONDecodeError:
+                            continue
+            if full_reply.strip():
+                self._append_to_history(user_name, "user", caption or "Solve coding problems")
+                self._append_to_history(user_name, "assistant", full_reply)
+        except (httpx.ConnectError, httpx.ConnectTimeout):
+            logger.warning(f"[ChatAgent] Ollama not reachable at {self.ollama_url}")
+            yield f"⚠️ Ollama is offline. Start it with: `ollama serve`"
+        except Exception as e:
+            logger.error(f"[ChatAgent] Code solver stream error: {e}")
+            yield f"❌ Error generating solutions: {e}"
+
     async def generate_response(self, prompt: str, user_name: str = "Charan") -> str:
         """Generate full response (non-streaming) — used as fallback."""
         full_text = ""

@@ -88,8 +88,8 @@ class IntentParser:
 
 
     def _extract_json(self, text: str) -> Optional[Dict]:
-        """Robustly extract JSON from LLM output."""
-        text = text.strip()
+        """Robustly extract JSON from LLM output, stripping reasoning tags if present."""
+        text = re.sub(r"<think>[\s\S]*?</think>", "", text).strip()
         # Try direct parse
         try:
             return json.loads(text)

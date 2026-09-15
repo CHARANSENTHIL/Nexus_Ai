@@ -333,8 +333,8 @@ def list_running_applications() -> List[Dict[str, Any]]:
 
 
 @tool
-def open_url_in_browser(url: str, browser: str = "chrome") -> Dict[str, Any]:
-    """Open a URL or search query in the browser (e.g. 'https://github.com', 'youtube marvel channel', or 'f1 cars')."""
+def open_url_in_browser(url: str, browser: str = "edge") -> Dict[str, Any]:
+    """Open a URL or search query in Microsoft Edge or Chrome browser."""
     url = url.strip()
     url_lower = url.lower()
 
@@ -355,8 +355,12 @@ def open_url_in_browser(url: str, browser: str = "chrome") -> Dict[str, Any]:
 
     try:
         if sys.platform == "win32":
-            subprocess.Popen(f'start "" "{url}"', shell=True)
-            return {"success": True, "message": f"Opened {url} in browser"}
+            target = "msedge" if browser.lower() in ("edge", "msedge", "microsoft edge") else ("chrome" if browser.lower() == "chrome" else "")
+            if target:
+                subprocess.Popen(f'start {target} "{url}"', shell=True)
+            else:
+                subprocess.Popen(f'start "" "{url}"', shell=True)
+            return {"success": True, "message": f"Opened {url} in {target or 'browser'}"}
         else:
             import webbrowser
             webbrowser.open(url)
@@ -453,7 +457,12 @@ public class Audio {{
 
 
 @tool
-def send_intelligent_email(prompt: str) -> Dict[str, Any]:
+def send_intelligent_email(
+    prompt: str,
+    recipient: str = "",
+    subject: str = "",
+    body: str = "",
+) -> Dict[str, Any]:
     """
     Intelligently drafts an email, discovers relevant local attachments, and dispatches via n8n Gmail workflow.
     Requires security approval for high-risk operations.
@@ -463,7 +472,12 @@ def send_intelligent_email(prompt: str) -> Dict[str, Any]:
     from app.agents.email_workflow import email_agent
 
     async def _execute():
-        draft = await email_agent.plan_and_draft_email(prompt)
+        draft = await email_agent.plan_and_draft_email(
+            user_prompt=prompt,
+            recipient_override=recipient,
+            subject_override=subject,
+            body_override=body,
+        )
         res = await email_agent.dispatch_to_n8n(draft)
         return {
             "success": res.get("success", True),
@@ -471,6 +485,7 @@ def send_intelligent_email(prompt: str) -> Dict[str, Any]:
             "subject": draft.get("subject"),
             "attachments": draft.get("attachment_names", []),
             "message": res.get("message", "Email workflow completed."),
+            "error": res.get("error", ""),
         }
 
     try:
@@ -488,3 +503,117 @@ def send_intelligent_email(prompt: str) -> Dict[str, Any]:
         return {"success": False, "error": f"Email workflow error: {e}"}
 
 
+@tool
+def download_images_from_web(query: str, count: int = 10) -> Dict[str, Any]:
+    """
+    Search the web for images matching a query and download them to local disk.
+    Uses Wikimedia Commons, Wikipedia PageImages, and Web Search.
+    Returns a dict with success status and list of downloaded file paths.
+    """
+    import httpx
+    import hashlib
+    import re
+    import urllib.parse
+    from pathlib import Path
+
+    # Clean query: "search the brad pitt photo" -> "brad pitt"
+    clean_q = re.sub(r"(?i)\b(search|the|photo|photos|image|images|picture|pictures|wallpaper|hd|of|and|download)\b", " ", query)
+    clean_q = re.sub(r"\s+", " ", clean_q).strip()
+    if not clean_q or len(clean_q) < 2:
+        clean_q = query.strip()
+
+    download_dir = Path.home() / "Downloads" / "nexus_images" / re.sub(r"[^\w\s-]", "", clean_q)[:40].strip()
+    download_dir.mkdir(parents=True, exist_ok=True)
+
+    headers = {"User-Agent": "NexusAI/1.0 (Desktop Assistant; charan@nexus.ai)"}
+    image_urls = []
+    downloaded = []
+    errors = []
+
+    try:
+        # Strategy 1: Wikimedia Commons Search API
+        try:
+            commons_url = f"https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch={urllib.parse.quote(clean_q)}&gsrlimit={count * 3}&prop=imageinfo&iiprop=url|size&format=json"
+            with httpx.Client(headers=headers, timeout=12.0) as client:
+                r = client.get(commons_url)
+                if r.status_code == 200:
+                    pages = r.json().get("query", {}).get("pages", {})
+                    for pid, p in pages.items():
+                        info = p.get("imageinfo", [{}])[0]
+                        u = info.get("url")
+                        if u and any(ext in u.lower() for ext in (".jpg", ".png", ".jpeg", ".webp")):
+                            image_urls.append(u)
+        except Exception as ce:
+            errors.append(f"Wikimedia Commons search: {ce}")
+
+        # Strategy 2: Wikipedia PageImages API
+        if len(image_urls) < count:
+            try:
+                wiki_url = f"https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch={urllib.parse.quote(clean_q)}&gsrlimit=10&prop=pageimages&piprop=original|thumbnail&pithumbsize=800&format=json"
+                with httpx.Client(headers=headers, timeout=12.0) as client:
+                    r = client.get(wiki_url)
+                    if r.status_code == 200:
+                        pages = r.json().get("query", {}).get("pages", {})
+                        for pid, p in pages.items():
+                            orig = p.get("original", {}).get("source") or p.get("thumbnail", {}).get("source")
+                            if orig and orig not in image_urls:
+                                image_urls.append(orig)
+            except Exception as we:
+                errors.append(f"Wikipedia search: {we}")
+
+        # Deduplicate
+        seen = set()
+        unique_urls = []
+        for url in image_urls:
+            if url not in seen:
+                seen.add(url)
+                unique_urls.append(url)
+        image_urls = unique_urls[:count * 2]
+
+        # Download images
+        with httpx.Client(headers=headers, follow_redirects=True, timeout=15.0) as client:
+            for idx, img_url in enumerate(image_urls):
+                if len(downloaded) >= count:
+                    break
+                try:
+                    img_resp = client.get(img_url)
+                    if img_resp.status_code == 200 and len(img_resp.content) > 1000:
+                        content_type = img_resp.headers.get("content-type", "")
+                        ext = ".jpg"
+                        if "png" in content_type:
+                            ext = ".png"
+                        elif "webp" in content_type:
+                            ext = ".webp"
+                        elif "gif" in content_type:
+                            ext = ".gif"
+
+                        safe_name = re.sub(r"[^\w\s-]", "", clean_q).replace(" ", "_")[:20]
+                        filename = f"{safe_name}_{idx + 1}{ext}"
+                        filepath = download_dir / filename
+
+                        with open(filepath, "wb") as f:
+                            f.write(img_resp.content)
+
+                        downloaded.append(str(filepath))
+                        logger.info(f"[ImageDownload] Downloaded: {filepath} ({len(img_resp.content)} bytes)")
+                except Exception as e:
+                    errors.append(f"Failed to download {img_url[:60]}: {e}")
+
+    except Exception as e:
+        return {"success": False, "error": f"Image search/download failed: {e}", "downloaded": downloaded}
+
+    if downloaded:
+        return {
+            "success": True,
+            "message": f"Downloaded {len(downloaded)} image(s) for '{clean_q}' to {download_dir}",
+            "downloaded": downloaded,
+            "download_dir": str(download_dir),
+            "errors": errors[:3] if errors else [],
+        }
+    else:
+        return {
+            "success": False,
+            "error": f"Could not download any images for '{clean_q}'. Tried {len(errors)} sources.",
+            "downloaded": [],
+            "errors": errors[:5],
+        }

@@ -1,5 +1,5 @@
 """
-Browser Agent — Specialized Agent for Playwright browser automation & web management.
+Browser Agent — Specialized Agent for Playwright browser automation, web workflows & human handoff.
 Sole owner of PlaywrightManager interface.
 """
 from app.agents.tools.browser_tools import (
@@ -9,16 +9,18 @@ from app.agents.tools.browser_tools import (
     read_page,
     click_element,
     fill_form,
+    inject_domain_credentials,
+    autofill_profile_form,
+    run_autonomous_browser_workflow,
     download_file,
-    upload_file,
     take_browser_screenshot,
-    get_page_text,
     close_browser,
 )
 
 BROWSER_AGENT_ROLE = (
     "a Playwright Web Automation Specialist. Navigate, search, extract text, fill forms, "
-    "click elements, download files, and manage Chromium, Edge, and Firefox browser contexts cleanly."
+    "inject encrypted credentials, execute autonomous multi-step web workflows, handle CAPTCHA/2FA handoff, "
+    "and manage browser contexts cleanly."
 )
 
 browser_tools = [
@@ -28,9 +30,10 @@ browser_tools = [
     read_page,
     click_element,
     fill_form,
+    inject_domain_credentials,
+    autofill_profile_form,
+    run_autonomous_browser_workflow,
     download_file,
-    upload_file,
     take_browser_screenshot,
-    get_page_text,
     close_browser,
 ]

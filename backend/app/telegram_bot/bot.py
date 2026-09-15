@@ -10,6 +10,8 @@ import asyncio
 import logging
 import time
 import uuid
+import re
+import json
 from typing import Optional, AsyncGenerator
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -24,6 +26,7 @@ from app.approval.executor import approval_center
 import sys
 import os
 import tempfile
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -98,13 +101,11 @@ async def stream_reply(
     chat_id: int,
     token_stream: AsyncGenerator[str, None],
     placeholder: str = "✍️ ...",
-    min_edit_interval: float = 0.3,
+    min_edit_interval: float = 1.5,
 ) -> str:
     """
     Sends one initial message, then edits it live as tokens stream in.
-    Throttled to ~1 edit per min_edit_interval seconds to stay under
-    Telegram's rate limit (30 edits/min per chat).
-    Returns the final full text.
+    Throttled to ~1 edit per 1.5s to stay safely under Telegram's rate limit.
     """
     # Send the placeholder message first
     try:
@@ -116,11 +117,12 @@ async def stream_reply(
     msg_id = sent.message_id
     accumulated = ""
     last_edit = 0.0
+    flood_paused = False
 
     async for token in token_stream:
         accumulated += token
         now = time.monotonic()
-        if now - last_edit >= min_edit_interval and accumulated.strip():
+        if not flood_paused and now - last_edit >= min_edit_interval and accumulated.strip():
             try:
                 await bot.edit_message_text(
                     chat_id=chat_id,
@@ -129,9 +131,12 @@ async def stream_reply(
                 )
                 last_edit = now
             except Exception as e:
-                # Ignore "message not modified" errors (same content)
-                if "message is not modified" not in str(e).lower():
-                    logger.warning(f"[stream_reply] Edit failed: {e}")
+                err_str = str(e).lower()
+                if "flood control" in err_str or "too many requests" in err_str:
+                    logger.warning("[stream_reply] Telegram flood limit reached — pausing live edits until done")
+                    flood_paused = True
+                elif "message is not modified" not in err_str:
+                    logger.warning(f"[stream_reply] Edit note: {e}")
 
     # Final edit with complete text
     if accumulated.strip() and accumulated != placeholder:
@@ -142,7 +147,10 @@ async def stream_reply(
                 text=accumulated,
             )
         except Exception:
-            pass
+            try:
+                await bot.send_message(chat_id=chat_id, text=accumulated)
+            except Exception:
+                pass
 
     return accumulated
 
@@ -322,6 +330,82 @@ async def _execute_subtasks(bot, chat_id, context, user, text, subtasks: list):
                                 )
                         except Exception as pe:
                             logger.warning(f"Failed to send screenshot: {pe}")
+
+            # Send Blender 3D rendered image and .blend project file if applicable
+            if "Rendered Image:" in output or "Project File:" in output:
+                import re as _re, os as _os
+                img_match = _re.search(r"Rendered Image:\s*(.+\.png)", output)
+                if img_match:
+                    render_img = img_match.group(1).strip()
+                    if _os.path.exists(render_img):
+                        try:
+                            with open(render_img, "rb") as rf:
+                                await bot.send_photo(
+                                    chat_id=chat_id, photo=rf,
+                                    caption="🎨 *Rendered 3D Scene (Blender 5.2)*",
+                                    parse_mode="Markdown",
+                                )
+                        except Exception as rpe:
+                            logger.warning(f"Failed to send blender render image: {rpe}")
+
+                blend_match = _re.search(r"Project File:\s*(.+\.blend)", output)
+                if blend_match:
+                    blend_path = blend_match.group(1).strip()
+                    if _os.path.exists(blend_path):
+                        try:
+                            with open(blend_path, "rb") as bf:
+                                await bot.send_document(
+                                    chat_id=chat_id, document=bf,
+                                    caption="📁 *Blender Project File (.blend)*",
+                                    parse_mode="Markdown",
+                                )
+                        except Exception as bfe:
+                            logger.warning(f"Failed to send blender project file: {bfe}")
+
+            # Send Presentation Deck (.html / .pptx)
+            if tool_name == "create_presentation" or (isinstance(raw_result, dict) and raw_result.get("file_path")):
+                import os as _os
+                fpath = raw_result.get("file_path") if isinstance(raw_result, dict) else None
+                if fpath and _os.path.exists(fpath):
+                    try:
+                        with open(fpath, "rb") as pf:
+                            await bot.send_document(
+                                chat_id=chat_id, document=pf,
+                                caption=f"📊 *Presentation Deck ({raw_result.get('total_slides', '')} slides)*\nOpen in any browser for full interactive slides.",
+                                parse_mode="Markdown",
+                            )
+                    except Exception as pfe:
+                        logger.warning(f"Failed to send presentation file: {pfe}")
+
+            # Send Market Technical Candlestick Chart Photo
+            if tool_name == "get_market_analysis" or (isinstance(raw_result, dict) and raw_result.get("chart_path")):
+                import os as _os
+                cpath = raw_result.get("chart_path") if isinstance(raw_result, dict) else None
+                if cpath and _os.path.exists(cpath):
+                    try:
+                        with open(cpath, "rb") as cf:
+                            await bot.send_photo(
+                                chat_id=chat_id, photo=cf,
+                                caption=f"📈 *Technical Chart: {raw_result.get('symbol', 'Market')}*",
+                                parse_mode="Markdown",
+                            )
+                    except Exception as cfe:
+                        logger.warning(f"Failed to send market chart: {cfe}")
+
+            # Send Deep Research Dossier (.html)
+            if tool_name == "conduct_deep_research" or (isinstance(raw_result, dict) and raw_result.get("report_html_path")):
+                import os as _os
+                hpath = raw_result.get("report_html_path") if isinstance(raw_result, dict) else None
+                if hpath and _os.path.exists(hpath):
+                    try:
+                        with open(hpath, "rb") as hf:
+                            await bot.send_document(
+                                chat_id=chat_id, document=hf,
+                                caption=f"🔬 *Deep Research Dossier ({raw_result.get('sources_count', 0)} sources)*",
+                                parse_mode="Markdown",
+                            )
+                    except Exception as hfe:
+                        logger.warning(f"Failed to send research dossier: {hfe}")
         except Exception as e:
             logger.error(f"[BOT] Tool execution error ({tool_name}): {e}", exc_info=True)
             await send_progress(bot, chat_id, f"❌ {title} failed: {str(e)[:200]}")
@@ -340,6 +424,50 @@ async def _execute_subtasks(bot, chat_id, context, user, text, subtasks: list):
     except Exception as me:
         logger.warning(f"[BOT] Failed to save memory: {me}")
 
+
+# ── Helper: Autonomous Coding Problem Batch Solver (Edge + Monaco DOM) ────────
+async def _execute_coding_problems_batch(bot, chat_id: int, problems: list):
+    """Executes batch of LeetCode / CodeChef problems autonomously in Microsoft Edge."""
+    from app.agents.leetcode_agent import leetcode_agent
+    await leetcode_agent.load_problem_registry()
+
+    platform_name = "CodeChef" if any(p.get("platform") == "codechef" for p in problems) else "LeetCode"
+    await send_progress(
+        bot, chat_id,
+        f"🎯 *Autonomous {platform_name} Solver Active*\nDetected *{len(problems)} problem(s)*.\nNavigating in Microsoft Edge, synthesizing optimal Python 3 code, and submitting sequentially..."
+    )
+
+    for idx, prob in enumerate(problems, 1):
+        p_title = prob.get("title", f"Problem {idx}")
+        p_num = prob.get("number", idx)
+        await send_progress(
+            bot, chat_id,
+            f"⏳ *[{idx}/{len(problems)}] Solving #{p_num} {p_title}...*\nOpening in Microsoft Edge, synthesizing Python 3 code & submitting..."
+        )
+
+        res = await leetcode_agent.fill_and_submit_on_screen(prob)
+        sol_preview = res.get("solution", "")
+        if res.get("success"):
+            msg = (
+                f"✅ *[{idx}/{len(problems)}] Submitted #{p_num} {p_title} in Microsoft Edge*\n"
+                f"🌐 *URL*: `{res.get('url')}`\n\n"
+            )
+            if sol_preview:
+                msg += f"💻 *Solution*:\n```python\n{sol_preview[:500]}\n```\n\n"
+            msg += "Moving to next problem in Edge..."
+            await send_progress(bot, chat_id, msg)
+        else:
+            await send_progress(
+                bot, chat_id,
+                f"⚠️ *[{idx}/{len(problems)}] #{p_num} {p_title} note:* {res.get('error', 'Execution note')}\nURL: `{res.get('url')}`"
+            )
+
+        await asyncio.sleep(2.0)
+
+    await send_progress(
+        bot, chat_id,
+        f"🎉 *{platform_name} Batch Completed!* Finished submitting all {len(problems)} problem(s)."
+    )
 
 
 # ── Message handler ───────────────────────────────────────────────────────────
@@ -387,6 +515,37 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE, tex
             if result.get("success"):
                 out = result.get("final_output", "Task completed.")
                 await send_progress(context.bot, chat_id, f"✅ *Task Completed*\n\n{out}")
+
+                # Send Blender 3D rendered image and .blend project file if applicable
+                if "Rendered Image:" in out or "Project File:" in out:
+                    import re as _re, os as _os
+                    img_match = _re.search(r"Rendered Image:\s*(.+\.png)", out)
+                    if img_match:
+                        render_img = img_match.group(1).strip()
+                        if _os.path.exists(render_img):
+                            try:
+                                with open(render_img, "rb") as rf:
+                                    await context.bot.send_photo(
+                                        chat_id=chat_id, photo=rf,
+                                        caption="🎨 *Rendered 3D Scene (Blender 5.2)*",
+                                        parse_mode="Markdown",
+                                    )
+                            except Exception as rpe:
+                                logger.warning(f"Failed to send blender render image: {rpe}")
+
+                    blend_match = _re.search(r"Project File:\s*(.+\.blend)", out)
+                    if blend_match:
+                        blend_path = blend_match.group(1).strip()
+                        if _os.path.exists(blend_path):
+                            try:
+                                with open(blend_path, "rb") as bf:
+                                    await context.bot.send_document(
+                                        chat_id=chat_id, document=bf,
+                                        caption="📁 *Blender Project File (.blend)*",
+                                        parse_mode="Markdown",
+                                    )
+                            except Exception as bfe:
+                                logger.warning(f"Failed to send blender project file: {bfe}")
             else:
                 err = result.get("final_output", "Task failed.")
                 await send_progress(context.bot, chat_id, f"❌ *Task Failed*\n\n{err}")
@@ -429,6 +588,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE, tex
                     return
     except Exception as e:
         logger.warning(f"[BOT] ChromaDB fast recall check: {e}")
+
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # STEP 0.5: Autonomous LeetCode / Competitive Programming Solver
+    # "solve leetcode 805 to 810", "solve leetcode 1", "solve codechef TVDISCOUNT"
+    # ═══════════════════════════════════════════════════════════════════════════
+    lower_text = text.lower()
+    if any(k in lower_text for k in ("leetcode", "codechef")) or (any(k in lower_text for k in ("solve", "problem")) and any(c.isdigit() for c in text)):
+        try:
+            from app.agents.leetcode_agent import leetcode_agent
+            await leetcode_agent.load_problem_registry()
+            problems = leetcode_agent.extract_problems_from_text("", caption=text)
+            if problems:
+                logger.info(f"[BOT] 🎯 Autonomous Coding Solver detected {len(problems)} problem(s) from text message")
+                await _execute_coding_problems_batch(context.bot, chat_id, problems)
+                return
+        except Exception as lc_err:
+            logger.warning(f"[BOT] Leetcode text router error: {lc_err}")
 
 
     # ═══════════════════════════════════════════════════════════════════════════
@@ -711,54 +888,21 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # ── Step 2: Check if this is a LeetCode / Coding Problem Solve Request ──
         lower_caption = caption.lower()
-        if any(w in lower_caption for w in ("solve", "leetcode", "code", "problem", "solution", "answer")) or "leetcode" in extracted_text.lower():
+        if any(w in lower_caption for w in ("solve", "leetcode", "codechef", "code", "problem", "solution", "answer")) or "leetcode" in extracted_text.lower() or "codechef" in extracted_text.lower():
             from app.agents.leetcode_agent import leetcode_agent
             await leetcode_agent.load_problem_registry()
             problems = leetcode_agent.extract_problems_from_text(extracted_text, caption=caption)
 
             if problems:
-
-                await send_progress(
-                    context.bot, chat_id,
-                    f"🎯 *LeetCode Autonomous Solver Active*\nDetected *{len(problems)} problem(s)* from request.\nNavigating to each page, filling the code, submitting, and progressing..."
-                )
-
-
-                for idx, prob in enumerate(problems, 1):
-                    p_title = prob["title"]
-                    p_num = prob["number"]
-                    await send_progress(
-                        context.bot, chat_id,
-                        f"⏳ *[{idx}/{len(problems)}] Solving #{p_num} {p_title}...*\nOpening page in Chrome, pasting solution into editor & submitting..."
-                    )
-
-                    res = await leetcode_agent.fill_and_submit_on_screen(prob)
-                    if res.get("success"):
-                        await send_progress(
-                            context.bot, chat_id,
-                            f"✅ *[{idx}/{len(problems)}] Submitted #{p_num} {p_title}*\nURL: `{res.get('url')}`\n\nMoving to next problem..."
-                        )
-                    else:
-                        await send_progress(
-                            context.bot, chat_id,
-                            f"⚠️ *[{idx}/{len(problems)}] #{p_num} {p_title} note:* {res.get('error', 'Execution note')}\nURL: `{res.get('url')}`"
-                        )
-
-                    await asyncio.sleep(2.0)
-
-                await send_progress(
-                    context.bot, chat_id,
-                    f"🎉 *LeetCode Batch Completed!* Finished submitting all {len(problems)} problem(s)."
-                )
+                await _execute_coding_problems_batch(context.bot, chat_id, problems)
                 return
 
-
-            # Fallback to LLM chat stream
-            await send_progress(context.bot, chat_id, "🔍 *Analyzing image content...*")
+            # Fallback: Competitive Programming & Code Solver (Phi-4-mini)
+            await send_progress(context.bot, chat_id, "💡 *Solving problems with Phi-4-mini...*")
             from app.agents.chat_agent import chat_agent
             await stream_reply(
                 context.bot, chat_id,
-                chat_agent.stream_response(combined_prompt, user_name=user.first_name or "Charan"),
+                chat_agent.stream_code_solution(caption, extracted_text, user_name=user.first_name or "Charan"),
             )
             return
 
@@ -815,6 +959,17 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Forward transcribed voice text through the full execution pipeline
         await handle_message(update, context, text_override=spoken_text)
 
+        # Send neural voice confirmation audio reply
+        try:
+            from app.voice.tts_engine import tts_engine
+            voice_prompt = f"Executed: {spoken_text}"
+            v_res = await tts_engine.generate_voice_note(voice_prompt)
+            if v_res.get("success") and os.path.exists(v_res.get("file_path")):
+                with open(v_res.get("file_path"), "rb") as vf:
+                    await context.bot.send_voice(chat_id=chat_id, voice=vf, caption="🎙️ *Nexus Audio Confirmation*", parse_mode="Markdown")
+        except Exception as tts_err:
+            logger.warning(f"[BOT] Voice response generation warning: {tts_err}")
+
     except Exception as e:
 
         logger.error(f"[BOT] Voice handling error: {e}", exc_info=True)
@@ -827,13 +982,199 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
 
 
+# ── Document / PDF Upload Handler ─────────────────────────────────────────────
+async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handles incoming PDF, text, and doc files uploaded to Telegram."""
+    user = update.effective_user
+    if not user or not is_allowed(user.id):
+        await update.message.reply_text("🚫 Access denied.")
+        return
+
+    chat_id = update.effective_chat.id
+    doc = update.message.document
+    if not doc:
+        return
+
+    caption = (update.message.caption or "").strip()
+    file_name = doc.file_name or f"upload_{int(time.time())}.pdf"
+    file_size_mb = (doc.file_size or 0) / (1024 * 1024)
+    logger.info(f"[BOT] Document received: '{file_name}' ({file_size_mb:.1f} MB) from {user.id} (caption: '{caption}')")
+
+    # 1. Telegram Bot API 20MB Download Limit Check
+    if doc.file_size and doc.file_size > 20 * 1024 * 1024:
+        msg = (
+            f"⚠️ *File Exceeds Size Limit ({file_size_mb:.1f} MB)*\n\n"
+            f"• **Telegram Bot Limit**: Telegram restricts bots from downloading files larger than *20 MB*.\n"
+            f"• **Gmail SMTP Limit**: Gmail also caps email attachments at *25 MB*.\n\n"
+            f"💡 *How to proceed*:\n"
+            f"1. Send files under *20 MB* (PDFs, docs, images, or code).\n"
+            f"2. For large zip files, extract the relevant documents or compress into parts <20MB."
+        )
+        await send_progress(context.bot, chat_id, msg)
+        return
+
+    await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+
+    docs_dir = Path("D:/nexus_ai/backend/documents_storage")
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    saved_path = docs_dir / file_name
+
+    try:
+        await send_progress(context.bot, chat_id, f"📥 *Downloading Document:* `{file_name}`\nIndexing with ChromaDB & Ollama...")
+        new_file = await doc.get_file()
+        await new_file.download_to_drive(custom_path=str(saved_path))
+
+        from app.agents.document_qa_agent import document_qa_agent
+        ingest_res = await document_qa_agent.ingest_document(str(saved_path), prompt=caption or None)
+
+        # Check if user requested to email this document (e.g. "mail this file to xyz@gmail.com")
+        email_match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", caption)
+        has_email_intent = bool(email_match) or any(w in caption.lower() for w in ("mail", "send to", "email to", "send this", "mail this", "email this"))
+
+        if has_email_intent and email_match:
+            recipient = email_match.group(0)
+            await send_progress(context.bot, chat_id, f"📧 *Mailing Document:* Dispatching `{file_name}` to `{recipient}` via Gmail SMTP...")
+
+            from app.agents.email_workflow import email_agent
+            draft = await email_agent.plan_and_draft_email(
+                user_prompt=caption,
+                recipient_override=recipient
+            )
+            # Ensure the uploaded document is the primary attachment
+            draft["attachments"] = [str(saved_path)]
+            draft["attachment_names"] = [file_name]
+
+            mail_res = await email_agent.dispatch_to_n8n(draft)
+            if mail_res.get("success"):
+                await send_progress(
+                    context.bot, chat_id,
+                    f"✅ *Email Sent Successfully!*\n"
+                    f"• **Recipient**: `{draft.get('to')}`\n"
+                    f"• **Subject**: `{draft.get('subject')}`\n"
+                    f"• **Attachment**: `{file_name}`\n"
+                    f"• **Engine**: Gmail SMTP\n\n"
+                    f"📄 _Document is also indexed into ChromaDB for Q&A._"
+                )
+                return
+            else:
+                await send_progress(
+                    context.bot, chat_id,
+                    f"❌ *Failed to send email:* {mail_res.get('error', 'SMTP Error')}"
+                )
+                return
+
+        if ingest_res.get("success"):
+            takeaways = "\n".join(f"• {t}" for t in ingest_res.get("key_takeaways", []))
+            summary_msg = (
+                f"📄 *Document Ingested Successfully!*\n"
+                f"• **File**: `{file_name}`\n"
+                f"• **Pages**: {ingest_res.get('total_pages', 1)} | **Words**: {ingest_res.get('word_count', 0):,}\n\n"
+                f"📝 *Summary*:\n{ingest_res.get('summary', '')}\n\n"
+                f"📌 *Key Takeaways*:\n{takeaways}\n\n"
+            )
+            if ingest_res.get("prompt_answer"):
+                summary_msg += f"💬 *Answer to your question*:\n{ingest_res.get('prompt_answer')}\n\n"
+
+            summary_msg += f"💡 _You can now ask questions about this document anytime!_"
+            await send_progress(context.bot, chat_id, summary_msg)
+        else:
+            await send_progress(context.bot, chat_id, f"⚠️ Document processing note: {ingest_res.get('error', 'Unable to parse document.')}")
+
+    except Exception as e:
+        logger.error(f"[BOT] Document handler error: {e}", exc_info=True)
+        await send_progress(context.bot, chat_id, f"❌ Failed to process document: {str(e)[:200]}")
+
+
+# ── Global Bot Application Instance ───────────────────────────────────────────
+_global_bot_app: Optional[Application] = None
+
+
+async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handles Telegram inline button callbacks (approvals, human handoff resolution)."""
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    data = query.data or ""
+    user_id = str(query.from_user.id)
+
+    logger.info(f"[BOT] Callback received: '{data}' from user {user_id}")
+
+    if data.startswith("approve:") or data.startswith("reject:"):
+        parts = data.split(":")
+        action = parts[0]
+        approval_id = parts[1]
+        approved = (action == "approve")
+        from app.approval.executor import approval_center
+        approval_center.resolve_approval(approval_id, approved)
+        status_text = "✅ *Action Approved*" if approved else "❌ *Action Rejected*"
+        await query.edit_message_text(f"{query.message.text}\n\n{status_text}", parse_mode="Markdown")
+
+    elif data.startswith("handoff_done:") or data.startswith("handoff_cancel:"):
+        parts = data.split(":")
+        action = parts[0]
+        checkpoint_id = parts[1]
+        approved = (action == "handoff_done")
+        from app.handoff.handoff_engine import handoff_engine
+        handoff_engine.resolve_handoff(checkpoint_id, approved=approved)
+        status_text = "✅ *Handoff Confirmed — Resuming Agent...*" if approved else "🛑 *Handoff Cancelled*"
+        await query.edit_message_text(f"{query.message.text}\n\n{status_text}", parse_mode="Markdown")
+
+
+async def send_handoff_notification(user_id: str, text: str, buttons: list, screenshot_path: Optional[str] = None):
+    """Sends human handoff prompts directly to user on Telegram with inline buttons."""
+    global _global_bot_app
+    if not _global_bot_app:
+        logger.warning(f"[BOT] Cannot send handoff notification: bot app not initialized.")
+        return
+
+    chat_id = int(user_id) if user_id.isdigit() else (settings.TELEGRAM_ALLOWED_USER_IDS[0] if settings.TELEGRAM_ALLOWED_USER_IDS else None)
+    if not chat_id:
+        return
+
+    keyboard = []
+    for row in buttons:
+        btn_row = [InlineKeyboardButton(text=b["text"], callback_data=b["callback_data"]) for b in row]
+        keyboard.append(btn_row)
+    reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
+
+    if screenshot_path and os.path.exists(screenshot_path):
+        try:
+            with open(screenshot_path, "rb") as photo:
+                await _global_bot_app.bot.send_photo(
+                    chat_id=chat_id,
+                    photo=photo,
+                    caption=text,
+                    parse_mode="Markdown",
+                    reply_markup=reply_markup,
+                )
+            return
+        except Exception as e:
+            logger.warning(f"[BOT] Failed sending handoff screenshot: {e}")
+
+    await _global_bot_app.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        parse_mode="Markdown",
+        reply_markup=reply_markup,
+    )
+
+
 # ── Bot builder ───────────────────────────────────────────────────────────────
 def build_telegram_app(token: str) -> Application:
+    global _global_bot_app
     app = Application.builder().token(token).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, handle_voice))
     app.add_handler(CallbackQueryHandler(handle_callback))
+    
+    _global_bot_app = app
+    from app.handoff.handoff_engine import handoff_engine
+    handoff_engine.register_notifier(send_handoff_notification)
     return app
+
+
 
 

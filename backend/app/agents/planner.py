@@ -97,6 +97,146 @@ Example for "Prepare my laptop for coding":
 )
 
 
+# ── Fast Compound Keyword Decomposer ──────────────────────────────────────────
+def _keyword_decompose_standalone(goal: str) -> List[Dict]:
+    """Fast keyword-based decomposition for compound tasks (search + download + email)."""
+    g = goal.lower()
+    tasks = []
+
+    # 0. Check for Presentation + Email compound tasks
+    has_presentation = any(w in g for w in ("ppt", "pptx", "powerpoint", "presentation", "slides", "slide deck", "pitch deck"))
+    has_email = any(w in g for w in ("email", "mail", "send to", "@"))
+    if has_presentation and has_email:
+        email_match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", goal)
+        recipient = email_match.group(0) if email_match else ""
+        return [
+            {
+                "id": "task_1",
+                "title": f"Create Presentation: {goal[:40]}",
+                "description": f"Generate modern presentation deck: {goal}",
+                "agent": "application",
+                "tool": "create_presentation",
+                "tool_input": {"prompt": goal},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            },
+            {
+                "id": "task_2",
+                "title": f"Send presentation to {recipient or 'recipient'}",
+                "description": f"Send generated presentation to {recipient}: {goal}",
+                "agent": "application",
+                "tool": "send_intelligent_email",
+                "tool_input": {"prompt": goal, "recipient": recipient},
+                "dependencies": ["task_1"],
+                "risk_level": "medium",
+                "requires_approval": False,
+            }
+        ]
+
+    # 1. Check for compound actions (e.g., search + download + email)
+    is_from_folder = bool(re.search(r"\b(?:from|in)\s+downloads?\b", g))
+    has_search = any(w in g for w in ("search for", "google for", "find online", "lookup online")) or (("search" in g or "google" in g) and not is_from_folder and "download" not in g)
+    has_download = (any(w in g for w in ("download images", "download photos", "save image", "save photo", "save file", "fetch image")) or ("download" in g and not is_from_folder))
+
+    if (has_search and has_download) or (has_download and has_email and not is_from_folder) or (has_search and has_email and not is_from_folder):
+        # Extract possible email recipient
+        email_match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", goal)
+        recipient = email_match.group(0) if email_match else ""
+
+        # Extract search query
+        search_match = re.search(r"(?i)(?:search|google|find|lookup|look up)\s+(?:for\s+)?(.*?)(?=\s+(?:and|then|after that|to|download|email|mail|\d+)|$)", goal)
+        clean_search = search_match.group(1).strip() if search_match else goal
+        if not clean_search:
+            clean_search = goal
+
+        # Extract count if mentioned
+        goal_no_email = re.sub(r"[\w\.-]+@[\w\.-]+\.\w+", "", goal)
+        count_match = re.search(r'\b(\d+)\b', goal_no_email)
+        word_numbers = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "fifteen": 15, "twenty": 20}
+        img_count = 10
+        if count_match:
+            img_count = int(count_match.group(1))
+        else:
+            for word, num in word_numbers.items():
+                if word in g:
+                    img_count = num
+                    break
+
+        is_image_query = any(w in g for w in ("photo", "photos", "image", "images", "picture", "pictures", "wallpaper", "wallpapers", "pic", "pics"))
+
+        if is_image_query:
+            # Clean image query terms: "india photo" -> "india"
+            clean_search = re.sub(r"(?i)\b(photo|photos|image|images|picture|pictures|wallpaper|wallpapers|pic|pics|hd)\b", "", clean_search).strip()
+            if not clean_search:
+                clean_search = "india"
+            tasks.append({
+                "id": f"task_{len(tasks)+1}",
+                "title": f"Search & download {img_count} image(s) of '{clean_search[:30]}'",
+                "description": f"Search web for images of {clean_search} and download to local disk",
+                "agent": "application",
+                "tool": "download_images_from_web",
+                "tool_input": {"query": clean_search, "count": img_count if img_count != 10 else 3},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            })
+        elif has_search and not has_download:
+            tasks.append({
+                "id": f"task_{len(tasks)+1}",
+                "title": f"Search web for '{clean_search[:40]}'",
+                "description": f"Deep web search via Playwright for: {clean_search}",
+                "agent": "application",
+                "tool": "search_web",
+                "tool_input": {"query": clean_search},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            })
+        elif has_search and has_download:
+            tasks.append({
+                "id": f"task_{len(tasks)+1}",
+                "title": f"Search & download {img_count} images of '{clean_search[:30]}'",
+                "description": f"Search web for images of {clean_search} and download {img_count} to local disk",
+                "agent": "application",
+                "tool": "download_images_from_web",
+                "tool_input": {"query": clean_search, "count": img_count},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            })
+        elif has_download:
+            tasks.append({
+                "id": f"task_{len(tasks)+1}",
+                "title": f"Download {img_count} images of '{clean_search[:30]}'",
+                "description": f"Download {img_count} images related to: {clean_search}",
+                "agent": "application",
+                "tool": "download_images_from_web",
+                "tool_input": {"query": clean_search, "count": img_count},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            })
+
+        if has_email:
+            tasks.append({
+                "id": f"task_{len(tasks)+1}",
+                "title": f"Send email to {recipient or 'recipient'}",
+                "description": f"Prepare and send intelligent email: {goal}",
+                "agent": "application",
+                "tool": "send_intelligent_email",
+                "tool_input": {"prompt": goal, "recipient": recipient},
+                "dependencies": [f"task_{len(tasks)}"] if tasks else [],
+                "risk_level": "medium",
+                "requires_approval": True,
+            })
+
+        if tasks:
+            return tasks
+
+    return []
+
+
 # ── CrewAI-style Intent Router (fast path, no LLM) ───────────────────────────
 class IntentRouter:
     """
@@ -111,6 +251,302 @@ class IntentRouter:
         None if LLM decomposition is needed.
         """
         g = goal.lower().strip()
+
+        # ── Check for compound multi-step search/download/email/presentation tasks first (0ms) ──
+        compound_res = _keyword_decompose_standalone(goal)
+        if compound_res:
+            return compound_res
+
+        # ── Presentation / PPT / Pitch Deck Generation (instant, 0ms) ──
+        if any(w in g for w in ("ppt", "pptx", "powerpoint", "presentation", "pitch deck", "slides", "slide deck", "create presentation", "make presentation", "generate presentation", "make slides")):
+            return [{
+                "id": "task_1",
+                "title": f"Create Presentation: {goal[:40]}",
+                "description": f"Generate modern responsive presentation deck: {goal}",
+                "agent": "application",
+                "tool": "create_presentation",
+                "tool_input": {"prompt": goal},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            }]
+
+        # ── Blender 3D Scene / Model Generation (instant, 0ms) ──
+        if "blender" in g or any(w in g for w in ("create 3d", "make 3d", "render 3d", "3d animation", "3d scene", "3d model")):
+            blend_match = re.search(r"(\w+)\.blend", goal, re.IGNORECASE)
+            fname = f"{blend_match.group(1)}.blend" if blend_match else "scene.blend"
+            is_anim = any(w in g for w in ("animation", "animate", "moving", "video", "frames"))
+            return [{
+                "id": "task_1",
+                "title": f"Create 3D Blender Scene: {goal[:40]}",
+                "description": f"Generate procedural 3D scene in Blender with bpy and render: {goal}",
+                "agent": "application",
+                "tool": "create_blender_scene",
+                "tool_input": {
+                    "prompt": goal,
+                    "filename": fname,
+                    "render_image": True,
+                    "is_animation": is_anim,
+                },
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            }]
+
+        # ── Email / n8n Workflow (instant, 0ms) ──
+        if "@" in g or any(w in g for w in ("send email", "send an email", "send a mail", "send mail", "mail to", "email to", "send my project", "send the report", "send report to", "mail my", "send update to", "send my report", "send project report", "mail regarding", "email regarding")):
+            email_match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", goal)
+            recipient = email_match.group(0) if email_match else ""
+            return [{
+                "id": "task_1",
+                "title": f"Send email to {recipient or 'recipient'}",
+                "description": f"Draft context-aware email and dispatch via SMTP/n8n: {goal}",
+                "agent": "email",
+                "tool": "send_intelligent_email",
+                "tool_input": {"prompt": goal, "recipient": recipient},
+                "dependencies": [],
+                "risk_level": "medium",
+                "requires_approval": False,
+            }]
+
+        # ── Financial & Market Intelligence Sentinel (instant, 0ms) ──
+        if any(w in g for w in ("stock price", "crypto price", "bitcoin price", "btc price", "eth price", "market analysis", "candlestick chart", "stock chart", "crypto chart", "crypto analysis", "share price")) or (any(w in g for w in ("price of", "chart for", "analysis of", "how is", "track")) and any(s in g for s in ("btc", "eth", "sol", "doge", "bitcoin", "ethereum", "solana", "aapl", "apple", "tsla", "tesla", "nvda", "nvidia", "msft", "nifty", "sensex", "gold", "silver"))):
+            sym_match = re.search(r"\b(btc|eth|sol|doge|bitcoin|ethereum|solana|aapl|tsla|nvda|msft|googl|meta|nifty|sensex|gold|silver|crude|[\^A-Za-z0-9\.\-=]{2,10})\b", goal, re.IGNORECASE)
+            symbol = sym_match.group(0) if sym_match else "BTC-USD"
+            return [{
+                "id": "task_1",
+                "title": f"Market Analysis for {symbol}",
+                "description": f"Fetch real-time data, technical chart, and AI analysis for {symbol}",
+                "agent": "application",
+                "tool": "get_market_analysis",
+                "tool_input": {"symbol": symbol, "period": "1mo", "generate_chart": True},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            }]
+
+        # ── Autonomous Browser Work Agent (instant, 0ms) ──
+        if any(w in g for w in ("download grade", "download report", "download invoice", "grade report", "portal", "student portal", "college portal", "login to", "fill out form", "web workflow", "browser workflow", "scrape web", "extract web")):
+            url_match = re.search(r"https?://[^\s]+", goal)
+            target_url = url_match.group(0) if url_match else ""
+            return [{
+                "id": "task_1",
+                "title": f"Browser Work Agent: {goal[:40]}",
+                "description": f"Execute autonomous closed-loop browser workflow: {goal}",
+                "agent": "application",
+                "tool": "run_autonomous_browser_workflow",
+                "tool_input": {"goal": goal, "url": target_url},
+                "dependencies": [],
+                "risk_level": "medium",
+                "requires_approval": False,
+            }]
+
+        # ── Autonomous Software Engineering & Code Repair (instant, 0ms) ──
+        if any(w in g for w in ("fix bug", "repair code", "debug function", "modify code", "fix error in", "coding agent", "software engineer", "patch code")):
+            file_match = re.search(r"([a-zA-Z0-9_\-\\\/\.]+\.py)", goal)
+            target_file = file_match.group(1) if file_match else ""
+            return [{
+                "id": "task_1",
+                "title": f"Autonomous Coding Agent: {goal[:40]}",
+                "description": f"AST symbol diagnosis and targeted patch with verification: {goal}",
+                "agent": "application",
+                "tool": "autonomous_coding_task",
+                "tool_input": {"goal": goal, "target_file": target_file},
+                "dependencies": [],
+                "risk_level": "medium",
+                "requires_approval": False,
+            }]
+
+        # ── DevOps & Codebase Testing / Diagnostics (instant, 0ms) ──
+        if any(w in g for w in ("run tests", "run pytest", "test codebase", "diagnose tests", "fix tests", "codebase health", "pytest")):
+            return [{
+                "id": "task_1",
+                "title": "Run & Diagnose Tests",
+                "description": "Execute pytest suite, analyze failures with LLM, and suggest fixes",
+                "agent": "application",
+                "tool": "test_and_repair_codebase",
+                "tool_input": {"target_dir": "D:\\nexus_ai\\backend", "auto_fix": False, "prompt": goal},
+                "dependencies": [],
+                "risk_level": "medium",
+                "requires_approval": False,
+            }]
+
+        # ── Document & PDF Q&A (instant, 0ms) ──
+        if any(w in g for w in ("analyze document", "summarize pdf", "read pdf", "query document", "ask document", "document qa")):
+            file_match = re.search(r"([a-zA-Z0-9_\-\\\/\.]+\.(?:pdf|txt|md|docx))", goal)
+            fpath = file_match.group(1) if file_match else ""
+            tool_name = "analyze_document" if any(w in g for w in ("summarize", "analyze", "ingest", "read")) else "query_document"
+            return [{
+                "id": "task_1",
+                "title": f"Document Task: {goal[:40]}",
+                "description": f"Analyze or query document: {goal}",
+                "agent": "application",
+                "tool": tool_name,
+                "tool_input": {"file_path": fpath, "prompt": goal, "question": goal},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            }]
+
+        # ── Proactive Morning Briefing (instant, 0ms) ──
+        if any(w in g for w in ("morning briefing", "daily briefing", "what's up today", "morning report", "daily digest", "morning update")):
+            return [{
+                "id": "task_1",
+                "title": "Daily Morning Briefing",
+                "description": "Fetch weather, market pulse, top tech headlines, and system vitals",
+                "agent": "application",
+                "tool": "get_morning_briefing",
+                "tool_input": {"location": "Chennai"},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            }]
+
+        # ── Autonomous Deep Research Agent (instant, 0ms) ──
+        if any(w in g for w in ("deep research", "research report", "investigate in depth", "deep analysis of", "comprehensive research on")):
+            topic = re.sub(r"^(?:deep research|research report on|investigate in depth|deep analysis of|comprehensive research on)\s*", "", goal, flags=re.IGNORECASE).strip() or goal
+            return [{
+                "id": "task_1",
+                "title": f"Deep Research: {topic[:40]}",
+                "description": f"Execute multi-hop search, evidence synthesis, and dossier generation for {topic}",
+                "agent": "application",
+                "tool": "conduct_deep_research",
+                "tool_input": {"topic": topic, "depth": "comprehensive"},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            }]
+
+        # ── Self-Evolving Tool & Skill Creator (instant, 0ms) ──
+        if any(w in g for w in ("create a tool to", "create tool to", "write a tool to", "make a tool to", "synthesize tool", "new tool to")):
+            tool_name_match = re.search(r"tool\s+(?:called|named)?\s*([a-zA-Z0-9_]+)", goal, re.IGNORECASE)
+            t_name = tool_name_match.group(1) if tool_name_match else "custom_agent_tool"
+            return [{
+                "id": "task_1",
+                "title": f"Synthesize New Tool: {t_name}",
+                "description": f"Synthesize and hot-reload dynamic Python tool: {goal}",
+                "agent": "application",
+                "tool": "create_new_tool",
+                "tool_input": {"tool_name": t_name, "purpose": goal},
+                "dependencies": [],
+                "risk_level": "medium",
+                "requires_approval": False,
+            }]
+
+        # ── Autonomous GitHub & Dev Documentation Hub (instant, 0ms) ──
+        if any(w in g for w in ("git changelog", "generate changelog", "release notes", "git summary", "draft dev post", "draft linkedin post")):
+            if "linkedin" in g or "social" in g or "post" in g:
+                platform = "twitter" if "twitter" in g or "tweet" in g else "linkedin"
+                return [{
+                    "id": "task_1",
+                    "title": f"Draft {platform.upper()} Dev Update",
+                    "description": "Synthesize recent git commits into an engaging developer post",
+                    "agent": "application",
+                    "tool": "draft_developer_social_post",
+                    "tool_input": {"repo_path": "D:\\nexus_ai", "platform": platform},
+                    "dependencies": [],
+                    "risk_level": "low",
+                    "requires_approval": False,
+                }]
+            else:
+                return [{
+                    "id": "task_1",
+                    "title": "Generate Git Changelog",
+                    "description": "Analyze recent commit history and produce markdown release notes",
+                    "agent": "application",
+                    "tool": "generate_git_changelog",
+                    "tool_input": {"repo_path": "D:\\nexus_ai", "max_commits": 15},
+                    "dependencies": [],
+                    "risk_level": "low",
+                    "requires_approval": False,
+                }]
+
+        # ── Autonomous Python & App Architect (instant, 0ms) ──
+        if any(w in g for w in ("build a", "build an", "create an app", "create a python app", "create a web app", "create a website", "build a website", "build app", "build software", "scaffold app", "scaffold a", "develop an app", "make an app", "make a python app", "build a grocery", "build a face", "generate app", "build application")) or (("build" in g or "create" in g or "scaffold" in g or "develop" in g) and any(w in g for w in ("app", "application", "website", "webapp", "system", "tool", "project", "program"))):
+            name_match = re.search(r"(?:app|application|website|project)\s+(?:called|named)?\s*([a-zA-Z0-9_]+)", goal, re.IGNORECASE)
+            app_n = name_match.group(1) if name_match else None
+            return [{
+                "id": "task_1",
+                "title": f"Build Application: {goal[:40]}",
+                "description": f"Provision virtual environment, install dependencies, and build complete software: {goal}",
+                "agent": "application",
+                "tool": "build_autonomous_application",
+                "tool_input": {"prompt": goal, "app_name": app_n},
+                "dependencies": [],
+                "risk_level": "medium",
+                "requires_approval": False,
+            }]
+
+        # ── SecOps & Security Auditor (instant, 0ms) ──
+        if any(w in g for w in ("audit security", "scan security", "check vulnerabilities", "secops audit", "security scorecard", "audit codebase")):
+            return [{
+                "id": "task_1",
+                "title": "SecOps Codebase Security Audit",
+                "description": "Perform static analysis, secret leak detection, and compute Security Grade",
+                "agent": "application",
+                "tool": "audit_codebase_security",
+                "tool_input": {"target_path": "D:\\nexus_ai\\backend"},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            }]
+
+        # ── Second Brain & Personal Knowledge Graph (instant, 0ms) ──
+        if any(w in g for w in ("take a note", "take note", "save note", "remember that", "add task", "second brain", "search notes", "query vault")):
+            if any(w in g for w in ("search notes", "query vault", "search second brain", "find note")):
+                q = re.sub(r"^(?:search notes|query vault|search second brain|find note)\s*(?:for|about)?\s*", "", goal, flags=re.IGNORECASE).strip() or goal
+                return [{
+                    "id": "task_1",
+                    "title": f"Search Second Brain: {q[:30]}",
+                    "description": f"Search Obsidian vault notes for '{q}'",
+                    "agent": "application",
+                    "tool": "query_second_brain",
+                    "tool_input": {"query": q},
+                    "dependencies": [],
+                    "risk_level": "low",
+                    "requires_approval": False,
+                }]
+            else:
+                return [{
+                    "id": "task_1",
+                    "title": f"Capture Thought: {goal[:30]}",
+                    "description": f"File note/task into Second Brain vault: {goal}",
+                    "agent": "application",
+                    "tool": "capture_thought_or_note",
+                    "tool_input": {"text": goal, "category": "auto"},
+                    "dependencies": [],
+                    "risk_level": "low",
+                    "requires_approval": False,
+                }]
+
+        # ── Live Meeting & Audio Note-Taking Assistant (instant, 0ms) ──
+        if any(w in g for w in ("summarize meeting", "meeting minutes", "meeting summary", "meeting notes")):
+            return [{
+                "id": "task_1",
+                "title": "Executive Meeting Minutes",
+                "description": f"Extract summary, decisions, and action items matrix: {goal}",
+                "agent": "application",
+                "tool": "summarize_meeting_audio",
+                "tool_input": {"transcript_text": goal, "meeting_title": "Executive Session"},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            }]
+
+        # ── Council of Experts Multi-Agent Debate (instant, 0ms) ──
+        if any(w in g for w in ("council debate", "ask council", "expert debate", "council of experts", "debate with council")):
+            topic = re.sub(r"^(?:council debate|ask council|expert debate|council of experts|debate with council)\s*(?:on|about)?\s*", "", goal, flags=re.IGNORECASE).strip() or goal
+            return [{
+                "id": "task_1",
+                "title": f"Council of Experts: {topic[:40]}",
+                "description": f"3-expert adversarial debate (Visionary, Skeptic, Pragmatist) on {topic}",
+                "agent": "application",
+                "tool": "deliberate_with_council",
+                "tool_input": {"topic": topic},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            }]
 
         # ── Check for compound multi-step goals ──
         # If prompt contains "then", "after that", or multiple distinct action types (e.g. open + health),
@@ -135,20 +571,6 @@ class IntentRouter:
                 "dependencies": [],
                 "risk_level": "low",
                 "requires_approval": False,
-            }]
-
-        # ── Email / n8n Workflow (instant) ──
-        if any(w in g for w in ("send email", "send an email", "send my project", "send the report", "send report to", "mail my", "email to", "send update to", "send my report", "send project report")):
-            return [{
-                "id": "task_1",
-                "title": "Prepare and Send Email",
-                "description": f"Draft context-aware email and dispatch via n8n: {goal}",
-                "agent": "email",
-                "tool": "send_intelligent_email",
-                "tool_input": {"prompt": goal},
-                "dependencies": [],
-                "risk_level": "medium",
-                "requires_approval": True,
             }]
 
 
@@ -358,6 +780,14 @@ def _is_compound_goal(g: str) -> bool:
     Check if a prompt contains multiple distinct requests combined together.
     Multi-step → return True → IntentRouter returns None → falls through to LangGraph.
     """
+    # Blender 3D scene descriptions often contain commas (bed, desk, chair) - do NOT treat as compound
+    if "blender" in g or any(w in g for w in ("create 3d", "make 3d", "render 3d", "3d scene", "3d animation")):
+        return False
+
+    # Email requests often mention recipients or multiple clauses ("now send a mail to X regarding Y") - do NOT treat as compound
+    if "@" in g or any(w in g for w in ("send email", "send an email", "send a mail", "send mail", "mail to", "email to")):
+        return False
+
     # Explicit multi-step conjunctions
     if any(w in g for w in ("then", "after that", "and then", "first", "finally", "next")):
         return True
@@ -506,7 +936,8 @@ def _build_tool_registry() -> Dict[str, Any]:
     )
     from app.agents.tools.app_tools import (
         open_application, close_application, run_shell_command,
-        set_system_volume, open_url_in_browser,
+        set_system_volume, open_url_in_browser, send_intelligent_email,
+        download_images_from_web,
     )
     from app.agents.tools.file_tools import (
         search_files, list_directory, copy_file, delete_file,
@@ -520,11 +951,64 @@ def _build_tool_registry() -> Dict[str, Any]:
     from app.agents.tools.n8n_tools import (
         list_n8n_workflows, trigger_n8n_workflow,
     )
+    from app.agents.tools.blender_tools import (
+        create_blender_scene,
+    )
+    from app.agents.tools.presentation_tools import (
+        create_presentation,
+    )
+    from app.agents.tools.document_tools import (
+        analyze_document, query_document,
+    )
+    from app.agents.tools.devops_tools import (
+        test_and_repair_codebase,
+    )
+    from app.agents.tools.finance_tools import (
+        get_market_analysis,
+    )
+    from app.agents.tools.skill_creator_tools import (
+        create_new_tool, list_custom_tools,
+    )
+    from app.agents.tools.gui_tools import (
+        execute_gui_actions, click_screen_text,
+    )
+    from app.agents.tools.research_tools import (
+        conduct_deep_research,
+    )
+    from app.agents.tools.sentinel_tools import (
+        get_morning_briefing, check_system_sentinel,
+    )
+    from app.agents.tools.github_tools import (
+        generate_git_changelog, draft_developer_social_post,
+    )
+    from app.agents.tools.app_architect_tools import (
+        build_autonomous_application,
+    )
+    from app.agents.tools.secops_tools import (
+        audit_codebase_security,
+    )
+    from app.agents.tools.second_brain_tools import (
+        capture_thought_or_note, query_second_brain,
+    )
+    from app.agents.tools.meeting_tools import (
+        summarize_meeting_audio,
+    )
+    from app.agents.tools.council_tools import (
+        deliberate_with_council,
+    )
     from app.agents.tools.browser_tools import (
         open_browser, open_url, search_web, read_page,
         click_element, fill_form, download_file, upload_file,
         take_browser_screenshot, get_page_text, close_browser,
+        inject_domain_credentials, autofill_profile_form,
+        run_autonomous_browser_workflow,
     )
+    from app.agents.tools.coding_tools import (
+        search_codebase_symbols, get_file_symbol_outline,
+        get_symbol_implementation, apply_targeted_diff,
+        run_unit_tests, manage_dev_server,
+    )
+    from app.agents.autonomous_coding_agent import autonomous_coding_agent
     return {
         # System tools
         "get_system_state": get_system_state.func,
@@ -540,6 +1024,8 @@ def _build_tool_registry() -> Dict[str, Any]:
         "run_shell_command": run_shell_command.func,
         "set_system_volume": set_system_volume.func,
         "open_url_in_browser": open_url_in_browser.func,
+        "send_intelligent_email": send_intelligent_email.func,
+        "download_images_from_web": download_images_from_web.func,
         # File tools
         "search_files": search_files.func,
         "list_directory": list_directory.func,
@@ -559,7 +1045,43 @@ def _build_tool_registry() -> Dict[str, Any]:
         # n8n Automation tools
         "list_n8n_workflows": list_n8n_workflows.func,
         "trigger_n8n_workflow": trigger_n8n_workflow.func,
-        # Browser tools (Playwright)
+        # Blender 3D tools
+        "create_blender_scene": create_blender_scene.func,
+        # Presentation generation
+        "create_presentation": create_presentation.func,
+        # Document Q&A tools
+        "analyze_document": analyze_document.func,
+        "query_document": query_document.func,
+        # DevOps maintainer
+        "test_and_repair_codebase": test_and_repair_codebase.func,
+        # Financial sentinel
+        "get_market_analysis": get_market_analysis.func,
+        # Self-Evolving Tool Creator
+        "create_new_tool": create_new_tool.func,
+        "list_custom_tools": list_custom_tools.func,
+        # Omni-GUI Computer Copilot
+        "execute_gui_actions": execute_gui_actions.func,
+        "click_screen_text": click_screen_text.func,
+        # Deep Research Agent
+        "conduct_deep_research": conduct_deep_research.func,
+        # Proactive Sentinel & Briefing
+        "get_morning_briefing": get_morning_briefing.func,
+        "check_system_sentinel": check_system_sentinel.func,
+        # GitHub & Dev Hub
+        "generate_git_changelog": generate_git_changelog.func,
+        "draft_developer_social_post": draft_developer_social_post.func,
+        # App Architect (Venv + Pip + Code)
+        "build_autonomous_application": build_autonomous_application.func,
+        # SecOps Sentinel
+        "audit_codebase_security": audit_codebase_security.func,
+        # Second Brain Vault
+        "capture_thought_or_note": capture_thought_or_note.func,
+        "query_second_brain": query_second_brain.func,
+        # Meeting Assistant
+        "summarize_meeting_audio": summarize_meeting_audio.func,
+        # Council of Experts
+        "deliberate_with_council": deliberate_with_council.func,
+        # Browser tools (Playwright & Autonomous Work Agent)
         "open_browser": open_browser.func,
         "open_url": open_url.func,
         "search_web": search_web.func,
@@ -571,6 +1093,17 @@ def _build_tool_registry() -> Dict[str, Any]:
         "take_browser_screenshot": take_browser_screenshot.func,
         "get_page_text": get_page_text.func,
         "close_browser": close_browser.func,
+        "inject_domain_credentials": inject_domain_credentials.func,
+        "autofill_profile_form": autofill_profile_form.func,
+        "run_autonomous_browser_workflow": run_autonomous_browser_workflow.func,
+        # Autonomous Software Engineer & Codebase Intelligence
+        "search_codebase_symbols": search_codebase_symbols.func,
+        "get_file_symbol_outline": get_file_symbol_outline.func,
+        "get_symbol_implementation": get_symbol_implementation.func,
+        "apply_targeted_diff": apply_targeted_diff.func,
+        "run_unit_tests": run_unit_tests.func,
+        "manage_dev_server": manage_dev_server.func,
+        "autonomous_coding_task": lambda goal, target_file=None: asyncio.run(autonomous_coding_agent.execute_task(goal=goal, target_file=target_file)),
     }
 
 
@@ -618,6 +1151,130 @@ def _format_tool_result(tool_name: str, result: Any) -> str:
             cap = "✅" if result.get("capture") else "❌"
             ocr = "✅" if result.get("ocr") else "❌"
             return f"👁️ Vision Status:\n  Screen Capture: {cap}\n  OCR: {ocr}"
+        elif tool_name == "download_images_from_web":
+            if result.get("success"):
+                files = result.get("downloaded", [])
+                file_list = "\n".join(f"  📷 {os.path.basename(f)}" for f in files[:10])
+                return (
+                    f"📥 Downloaded {len(files)} images to: {result.get('download_dir', '?')}\n"
+                    f"{file_list}"
+                )
+            return f"❌ Image download failed: {result.get('error', 'Unknown')}"
+        elif tool_name == "send_intelligent_email":
+            if result.get("success"):
+                return (
+                    f"📧 Email sent to {result.get('recipient', '?')}\n"
+                    f"  Subject: {result.get('subject', '?')}\n"
+                    f"  Attachments: {', '.join(result.get('attachments', [])) or 'None'}\n"
+                    f"  Engine: {result.get('message', 'Dispatched')}"
+                )
+            return f"❌ Email failed: {result.get('error', 'Unknown')}"
+        elif tool_name == "create_presentation":
+            if result.get("success"):
+                return (
+                    f"📊 Presentation Generated Successfully!\n"
+                    f"  Topic: {result.get('topic', 'Presentation')}\n"
+                    f"  Slides: {result.get('total_slides', 0)}\n"
+                    f"  File: {result.get('file_path', '')}\n"
+                    f"  Format: {result.get('format', 'HTML5 Deck')}"
+                )
+            return f"❌ Presentation generation failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "get_market_analysis":
+            if result.get("success"):
+                return result.get("formatted_summary", f"Market data for {result.get('symbol')}: ${result.get('current_price')}")
+            return f"❌ Market data fetch failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "test_and_repair_codebase":
+            if result.get("success"):
+                if result.get("status") == "ALL_PASSED":
+                    return f"✅ {result.get('summary', 'All tests passed!')}"
+                diag = result.get("analysis", "")
+                fix = result.get("proposed_fix", "")
+                return (
+                    f"⚠️ {result.get('summary')}\n\n"
+                    f"🔍 Diagnostics:\n{diag}\n\n"
+                    f"💡 Suggested Fix:\n{fix}"
+                )
+            return f"❌ DevOps test runner failed: {result.get('error', 'Unknown error')}"
+        elif tool_name in ("analyze_document", "query_document"):
+            if result.get("success"):
+                if tool_name == "analyze_document":
+                    takeaways = "\n".join(f"• {t}" for t in result.get("key_takeaways", []))
+                    return (
+                        f"📄 Document Analyzed ({result.get('filename')}, {result.get('total_pages', 1)} pages, {result.get('word_count', 0)} words):\n\n"
+                        f"📝 Summary:\n{result.get('summary', '')}\n\n"
+                        f"📌 Key Takeaways:\n{takeaways}"
+                    )
+                else:
+                    return f"❓ Q&A Result ({result.get('source_document', 'Doc')}):\n\n{result.get('answer', '')}"
+            return f"❌ Document processing failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "create_new_tool":
+            if result.get("success"):
+                return f"🧠 Tool '{result.get('tool_name')}' Synthesized & Registered!\n  File: {result.get('file_path')}\n  Status: {result.get('message')}"
+            return f"❌ Tool synthesis failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "list_custom_tools":
+            if result.get("success"):
+                tools = result.get("tools", [])
+                lines = "\n".join(f"  • {t['name']}" for t in tools) if tools else "  None created yet."
+                return f"🧠 Dynamic Custom Tools ({result.get('count', 0)}):\n{lines}"
+            return f"❌ Failed to list tools: {result.get('error')}"
+        elif tool_name in ("execute_gui_actions", "click_screen_text"):
+            if result.get("success"):
+                steps = "\n".join(f"  {s}" for s in result.get("executed_steps", [])) if result.get("executed_steps") else f"  {result.get('message')}"
+                return f"👁️ GUI Copilot Execution:\n{steps}"
+            return f"❌ GUI action failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "conduct_deep_research":
+            if result.get("success"):
+                return (
+                    f"🔬 Deep Research Dossier Generated ({result.get('topic')})!\n"
+                    f"  Evidence Sources: {result.get('sources_count', 0)}\n"
+                    f"  Markdown Dossier: {result.get('report_md_path')}\n"
+                    f"  HTML Dossier: {result.get('report_html_path')}\n\n"
+                    f"📝 Executive Summary:\n{result.get('executive_summary', '')}"
+                )
+            return f"❌ Deep research failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "get_morning_briefing":
+            if result.get("success"):
+                return result.get("briefing_text", "Morning briefing ready.")
+            return f"❌ Morning briefing failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "check_system_sentinel":
+            if result.get("success"):
+                st = result.get("stats", {})
+                alerts = ", ".join(result.get("alerts", [])) if result.get("alerts") else "All thresholds nominal."
+                return f"🛡️ Sentinel Check:\n  CPU: {st.get('cpu')}% | RAM: {st.get('ram')}%\n  Status: {alerts}"
+            return f"❌ Sentinel check failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "generate_git_changelog":
+            if result.get("success"):
+                return f"🐙 Git Changelog ({result.get('branch', 'main')}, {result.get('commits_analyzed', 0)} commits):\n\n{result.get('changelog', '')}"
+            return f"❌ Changelog failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "draft_developer_social_post":
+            if result.get("success"):
+                return f"📱 Developer Social Post ({result.get('platform', 'Dev')})\n\n{result.get('post_content', '')}"
+            return f"❌ Social post draft failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "build_autonomous_application":
+            if result.get("success"):
+                return result.get("summary", "Application built successfully.")
+            return f"❌ Application build failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "audit_codebase_security":
+            if result.get("success"):
+                return result.get("formatted_report", "Security audit complete.")
+            return f"❌ Security audit failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "capture_thought_or_note":
+            if result.get("success"):
+                return f"🧠 Second Brain: {result.get('message')}\n  File: {result.get('file_path')}"
+            return f"❌ Note capture failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "query_second_brain":
+            if result.get("success"):
+                lines = "\n".join(f"  • {r['file']}: {r['snippet'][:80]}..." for r in result.get('results', []))
+                return f"🧠 Second Brain Vault Search ({result.get('count', 0)} matches):\n{lines or '  No notes found.'}"
+            return f"❌ Vault search failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "summarize_meeting_audio":
+            if result.get("success"):
+                return f"📋 Meeting Minutes Generated ({result.get('meeting_title')}):\n\n{result.get('minutes', '')}"
+            return f"❌ Meeting processing failed: {result.get('error', 'Unknown error')}"
+        elif tool_name == "deliberate_with_council":
+            if result.get("success"):
+                return result.get("deliberation", "Council debate complete.")
+            return f"❌ Council debate failed: {result.get('error', 'Unknown error')}"
         elif "success" in result:
             if result["success"]:
                 return f"✅ {result.get('message', 'Done')}"
@@ -682,20 +1339,28 @@ class PlannerAgent:
     async def _decompose_with_fallbacks(self, goal: str, state_str: str, memory_context: str) -> List[Dict]:
         """Attempt LLM decomposition using local Ollama."""
         try:
-            m = getattr(settings, "OLLAMA_MODEL", "llama3")
+            m = getattr(settings, "OLLAMA_COMPLEX_MODEL", "qwen3:4b")
             logger.info(f"[Planner] Attempting decomposition with local Ollama: {m}")
-            current_llm = get_llm()
-            current_chain = DECOMPOSITION_PROMPT | current_llm | JsonOutputParser()
-            
-            result = await current_chain.ainvoke({
+            current_llm = get_llm(m)
+            prompt_val = await DECOMPOSITION_PROMPT.ainvoke({
                 "goal": goal,
                 "system_state": state_str,
                 "memory_context": memory_context[:400],
             })
+            raw = await current_llm.ainvoke(prompt_val.to_string())
+            cleaned = re.sub(r"<think>[\s\S]*?</think>", "", raw).strip()
             
-            if isinstance(result, list):
-                logger.info(f"[Planner] Successful decomposition using local Ollama")
-                return result
+            import json
+            for pattern in [r"```json\s*([\s\S]*?)\s*```", r"```\s*([\s\S]*?)\s*```", r"(\[[\s\S]*\])"]:
+                match = re.search(pattern, cleaned)
+                if match:
+                    try:
+                        res = json.loads(match.group(1))
+                        if isinstance(res, list):
+                            logger.info(f"[Planner] Successful decomposition using local Ollama ({len(res)} subtasks)")
+                            return res
+                    except Exception:
+                        continue
         except Exception as e:
             logger.warning(f"[Planner] Local Ollama decomposition failed: {e}")
         
@@ -736,7 +1401,7 @@ class PlannerAgent:
                 logger.warning(f"[Planner] NLP Intent Parser error: {e}")
 
         # ── Tier 3: Full LLM DAG Decomposition ──
-        if raw_subtasks is None:
+        if not raw_subtasks:
             logger.info(f"[Planner] Tier 3 Full LLM decomposition for: {goal[:60]}")
             state_str = str(system_state or {})[:800]
             try:
@@ -748,6 +1413,23 @@ class PlannerAgent:
             except Exception as e:
                 logger.warning(f"LLM decomposition failed ({e}), using keyword fallback")
                 raw_subtasks = self._keyword_decompose(goal)
+
+        if not raw_subtasks:
+            logger.info(f"[Planner] Falling back to keyword decomposer for: {goal[:60]}")
+            raw_subtasks = self._keyword_decompose(goal)
+
+        if not raw_subtasks:
+            raw_subtasks = [{
+                "id": "task_1",
+                "title": f"Execute request: {goal[:50]}",
+                "description": goal,
+                "agent": "system",
+                "tool": "run_shell_command",
+                "tool_input": {"command": goal},
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            }]
 
         nodes: Dict[str, TaskNode] = {}
         execution_order: List[str] = []
@@ -808,6 +1490,132 @@ class PlannerAgent:
         """Fast keyword-based decomposition when LLM is unavailable or fails."""
         g = goal.lower()
         tasks = []
+
+        # 0. Blender 3D Scene / Model Generation (instant, 0ms)
+        if "blender" in g or any(w in g for w in ("create 3d", "make 3d", "render 3d", "3d animation", "3d scene", "3d model")):
+            blend_match = re.search(r"(\w+)\.blend", goal, re.IGNORECASE)
+            fname = f"{blend_match.group(1)}.blend" if blend_match else "scene.blend"
+            is_anim = any(w in g for w in ("animation", "animate", "moving", "video", "frames"))
+            return [{
+                "id": "task_1",
+                "title": f"Create 3D Blender Scene: {goal[:40]}",
+                "description": f"Generate procedural 3D scene in Blender with bpy and render: {goal}",
+                "agent": "application",
+                "tool": "create_blender_scene",
+                "tool_input": {
+                    "prompt": goal,
+                    "filename": fname,
+                    "render_image": True,
+                    "is_animation": is_anim,
+                },
+                "dependencies": [],
+                "risk_level": "low",
+                "requires_approval": False,
+            }]
+
+        # 1. Check for compound actions (e.g., search + download + email)
+        has_search = any(w in g for w in ("search", "google", "find online", "lookup", "look up"))
+        has_download = any(w in g for w in ("download", "save image", "save photo", "save file", "fetch image"))
+        has_email = any(w in g for w in ("email", "mail", "send to", "@"))
+
+        if has_search or has_download or has_email:
+            # Extract possible email recipient
+            email_match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", goal)
+            recipient = email_match.group(0) if email_match else ""
+
+            # Extract search query
+            search_match = re.search(r"(?i)(?:search|google|find|lookup|look up)\s+(?:for\s+)?(.*?)(?=\s+(?:and|then|after that|to|download|email|mail|\d+)|$)", goal)
+            clean_search = search_match.group(1).strip() if search_match else goal
+            if not clean_search:
+                clean_search = goal
+
+            # Extract count if mentioned (e.g. "download ten images")
+            # Strip email addresses first so digits inside them aren't matched
+            goal_no_email = re.sub(r"[\w\.-]+@[\w\.-]+\.\w+", "", goal)
+            count_match = re.search(r'\b(\d+)\b', goal_no_email)
+            word_numbers = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "fifteen": 15, "twenty": 20}
+            img_count = 10
+            if count_match:
+                img_count = int(count_match.group(1))
+            else:
+                for word, num in word_numbers.items():
+                    if word in g:
+                        img_count = num
+                        break
+
+            is_image_query = any(w in g for w in ("photo", "photos", "image", "images", "picture", "pictures", "wallpaper", "wallpapers", "pic", "pics"))
+
+            if is_image_query:
+                # Clean image query terms: "india photo" -> "india"
+                clean_search = re.sub(r"(?i)\b(photo|photos|image|images|picture|pictures|wallpaper|wallpapers|pic|pics|hd)\b", "", clean_search).strip()
+                if not clean_search:
+                    clean_search = "india"
+                tasks.append({
+                    "id": f"task_{len(tasks)+1}",
+                    "title": f"Search & download {img_count} image(s) of '{clean_search[:30]}'",
+                    "description": f"Search web for images of {clean_search} and download to local disk",
+                    "agent": "application",
+                    "tool": "download_images_from_web",
+                    "tool_input": {"query": clean_search, "count": img_count if img_count != 10 else 3},
+                    "dependencies": [],
+                    "risk_level": "low",
+                    "requires_approval": False,
+                })
+            elif has_search and not has_download:
+                # Pure search → use search_web (Playwright deep search)
+                tasks.append({
+                    "id": f"task_{len(tasks)+1}",
+                    "title": f"Search web for '{clean_search[:40]}'",
+                    "description": f"Deep web search via Playwright for: {clean_search}",
+                    "agent": "application",
+                    "tool": "search_web",
+                    "tool_input": {"query": clean_search},
+                    "dependencies": [],
+                    "risk_level": "low",
+                    "requires_approval": False,
+                })
+            elif has_search and has_download:
+                # Search + Download → use download_images_from_web (does both)
+                tasks.append({
+                    "id": f"task_{len(tasks)+1}",
+                    "title": f"Search & download {img_count} images of '{clean_search[:30]}'",
+                    "description": f"Search web for images of {clean_search} and download {img_count} to local disk",
+                    "agent": "application",
+                    "tool": "download_images_from_web",
+                    "tool_input": {"query": clean_search, "count": img_count},
+                    "dependencies": [],
+                    "risk_level": "low",
+                    "requires_approval": False,
+                })
+            elif has_download:
+                # Download only
+                tasks.append({
+                    "id": f"task_{len(tasks)+1}",
+                    "title": f"Download {img_count} images of '{clean_search[:30]}'",
+                    "description": f"Download {img_count} images related to: {clean_search}",
+                    "agent": "application",
+                    "tool": "download_images_from_web",
+                    "tool_input": {"query": clean_search, "count": img_count},
+                    "dependencies": [],
+                    "risk_level": "low",
+                    "requires_approval": False,
+                })
+
+            if has_email:
+                tasks.append({
+                    "id": f"task_{len(tasks)+1}",
+                    "title": f"Send email to {recipient or 'recipient'}",
+                    "description": f"Prepare and send intelligent email: {goal}",
+                    "agent": "application",
+                    "tool": "send_intelligent_email",
+                    "tool_input": {"prompt": goal, "recipient": recipient},
+                    "dependencies": [f"task_{len(tasks)}"] if tasks else [],
+                    "risk_level": "medium",
+                    "requires_approval": True,
+                })
+
+            if tasks:
+                return tasks
 
         # Vision tasks
         if any(w in g for w in ("screenshot", "capture", "snap")):

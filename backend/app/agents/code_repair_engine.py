@@ -177,6 +177,28 @@ class AICodeRepairEngine:
                 repaired_line = target_line + ("}" * open_c)
                 explanation = f"Closed unmatched brace '}}' on line {line_no}"
 
+        # ── Case 4: Tkinter geometry manager mixing (pack vs grid) ───────────────
+        elif "cannot use geometry manager" in error_msg:
+            grid_count = sum(1 for l in lines if ".grid(" in l)
+            pack_count = sum(1 for l in lines if ".pack(" in l)
+            new_lines = []
+            if grid_count >= pack_count:
+                for l in lines:
+                    if ".pack(" in l:
+                        l = re.sub(r"\.pack\([^)]*\)", ".grid(row=0, column=0, columnspan=2, pady=5)", l)
+                    new_lines.append(l)
+            else:
+                for l in lines:
+                    if ".grid(" in l:
+                        l = re.sub(r"\.grid\([^)]*\)", ".pack(pady=5)", l)
+                    new_lines.append(l)
+            new_content = "\n".join(new_lines)
+            try:
+                ast.parse(new_content)
+                return new_content, f"Resolved Tkinter pack/grid geometry conflict on line {line_no}"
+            except Exception:
+                pass
+
         if repaired_line != target_line:
             lines[line_no - 1] = repaired_line
             new_content = "\n".join(lines)

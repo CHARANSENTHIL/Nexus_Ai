@@ -49,6 +49,14 @@ class Settings(BaseSettings):
     EVENT_BUS_CONSUMER_TIMEOUT_MS: int = 5000
     TASK_COMPLETION_TIMEOUT: float = 120.0
 
+    # SMTP Email Settings (Gmail)
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = "charanharshini7@gmail.com"
+    SMTP_PASSWORD: str = "cxxf siut upns frnm"
+    SENDER_EMAIL: str = "charanharshini7@gmail.com"
+    SENDER_NAME: str = "JARVIS"
+
 
 
     @field_validator("TELEGRAM_ALLOWED_USER_IDS", mode="before")

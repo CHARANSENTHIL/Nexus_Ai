@@ -6,8 +6,8 @@ import logging
 import time
 from typing import List
 
-
 from app.browser.playwright_manager import playwright_manager
+from app.browser.browser_work_agent import browser_work_agent
 from app.events.agent_worker import AgentWorker
 from app.events.event_models import (
     ActionCompletedPayload,
@@ -40,14 +40,44 @@ class BrowserWorker(AgentWorker):
 
         try:
             url = tool_input.get("url") or tool_input.get("query") or "https://www.google.com"
-            if action in ("open_url_in_browser", "open_url", "browse"):
+            goal = tool_input.get("goal") or tool_input.get("objective") or action
+
+            if action == "run_autonomous_browser_workflow":
+                res_dict = await browser_work_agent.run_objective(
+                    goal=goal,
+                    initial_url=tool_input.get("url"),
+                    task_id=event.task_id,
+                    user_id=event.user_id,
+                )
+                res = res_dict.get("summary", "Browser workflow finished.")
+            elif action == "inject_domain_credentials":
+                res_dict = await playwright_manager.inject_credentials(tool_input.get("domain"))
+                res = f"Credential injection: {res_dict}"
+            elif action == "autofill_profile_form":
+                res_dict = await playwright_manager.autofill_profile_fields()
+                res = f"Autofilled profile fields: {res_dict}"
+            elif action in ("open_url_in_browser", "open_url", "browse"):
                 from app.agents.tools.app_tools import open_url_in_browser
                 fn = getattr(open_url_in_browser, "func", open_url_in_browser)
                 res = await asyncio.to_thread(fn, url)
                 if isinstance(res, dict):
                     res = res.get("message", f"Opened {url} in browser")
+            elif action == "download_images_from_web":
+                from app.agents.tools.app_tools import download_images_from_web
+                fn = getattr(download_images_from_web, "func", download_images_from_web)
+                query_val = tool_input.get("query", url)
+                count_val = tool_input.get("count", 3)
+                res = await asyncio.to_thread(fn, query=query_val, count=count_val)
+                if isinstance(res, dict):
+                    res = res.get("message", f"Downloaded images for {query_val}")
             elif action == "search_web":
                 res = await playwright_manager.search_web(url)
+            elif action == "click_element":
+                res = await playwright_manager.click_element(tool_input.get("selector", ""))
+            elif action == "fill_form":
+                res = await playwright_manager.fill_form(tool_input.get("selector", ""), tool_input.get("value", ""))
+            elif action == "read_page":
+                res = await playwright_manager.read_page()
             else:
                 from app.agents.tools.app_tools import open_url_in_browser
                 fn = getattr(open_url_in_browser, "func", open_url_in_browser)
@@ -55,12 +85,10 @@ class BrowserWorker(AgentWorker):
                 if isinstance(res, dict):
                     res = res.get("message", f"Opened {url} in browser")
 
-
-
             duration_ms = (time.time() - start_time) * 1000
             comp_payload = ActionCompletedPayload(
                 action=action,
-                result=res or f"Opened browser URL: {url}",
+                result=res or f"Browser action '{action}' completed.",
                 success=True,
                 duration_ms=duration_ms,
                 subtask_index=subtask_idx,
@@ -79,7 +107,7 @@ class BrowserWorker(AgentWorker):
                 task_id=event.task_id,
                 user_id=event.user_id,
                 source_agent=self.name,
-                payload={"final_output": f"🌐 Browser action '{action}' completed successfully: {url}"},
+                payload={"final_output": f"🌐 Browser action '{action}' completed successfully: {res}"},
             )
             await task_tracker.update_task_from_event(task_comp_evt)
             return [comp_evt, task_comp_evt]

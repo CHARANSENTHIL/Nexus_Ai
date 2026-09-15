@@ -62,6 +62,13 @@ async def lifespan(app: FastAPI):
     # Start health monitor
     health_task = asyncio.create_task(health_monitor_worker.run(stop_event))
 
+    # Start Proactive Background Sentinel
+    try:
+        from app.sentinel.sentinel_scheduler import sentinel_scheduler
+        await sentinel_scheduler.start()
+    except Exception as se_err:
+        logger.warning(f"[Sentinel] Startup warning: {se_err}")
+
     # Start Telegram bot if token is configured
     telegram_token = getattr(settings, "TELEGRAM_BOT_TOKEN", "") or os.getenv("TELEGRAM_BOT_TOKEN", "")
     if telegram_token:
@@ -75,6 +82,11 @@ async def lifespan(app: FastAPI):
     yield
 
     stop_event.set()
+    try:
+        from app.sentinel.sentinel_scheduler import sentinel_scheduler
+        await sentinel_scheduler.stop()
+    except Exception:
+        pass
     if event_workers_started:
         for worker in ALL_WORKERS:
             await worker.stop()

@@ -108,3 +108,18 @@ pnpm-debug.log*
 Thumbs.db
 desktop.ini
 .agents/
+telegram_bot.lock
+*.lock
+
+# ── Generated Agent Outputs & User Data ───────────────────────────────────────
+backend/blender_output/
+backend/blender_scripts/
+backend/documents_storage/
+backend/presentation_output/
+backend/voice_output/
+presentation_output/
+generated_apps/
+meeting_minutes/
+second_brain/
+*.enc
+.nexus_ai/
