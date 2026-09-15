@@ -1,309 +1,186 @@
-# ⚡ Nexus AI — Autonomous Desktop Agent
+# ⚡ Nexus AI — Autonomous Operating System & Digital Work Automation Platform
 
-> **Production-grade, 100% local-first autonomous AI desktop agent for Windows.**  
-> Natural language goals → LangChain + CrewAI + Llama 3 → autonomous multi-step execution → Telegram notifications.
+> **A 100% Local-First, Sovereign Autonomous AI Platform that controls your PC, automates complex knowledge work, writes & debugs software, navigates the web, and collaborates with you in real-time.**
 
-[![CI](https://github.com/yourusername/nexus-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/nexus-ai/actions)
-![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)
-![LangChain](https://img.shields.io/badge/LangChain-0.2+-green)
-![CrewAI](https://img.shields.io/badge/CrewAI-0.51+-purple)
-![Llama3](https://img.shields.io/badge/Llama3-Ollama-orange)
-![Next.js](https://img.shields.io/badge/Next.js-14-black)
-
----
-
-## 🧠 What Is Nexus AI?
-
-Nexus AI transforms your Windows computer into an intelligent autonomous assistant. Send a natural language goal via Telegram — the AI plans it, executes it, and reports back.
-
-**Example:**
-> You: *"Prepare my laptop for today's coding session."*
-
-Nexus AI automatically:
-1. Checks battery + system health
-2. Opens VS Code
-3. Starts Docker Desktop
-4. Opens GitHub in Chrome
-5. Starts Spotify
-6. Closes distracting apps
-7. Verifies internet connectivity
-8. Reports: *"✅ Coding workspace ready in 12 seconds."*
-
-No slash commands. No manual steps. Just goals.
+[![GitHub Repo](https://img.shields.io/badge/GitHub-CHARANSENTHIL%2FNexus__Ai-blue?logo=github)](https://github.com/CHARANSENTHIL/Nexus_Ai)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python)
+![Ollama](https://img.shields.io/badge/LLM-Local%20Ollama%20(Llama3%20%7C%20Qwen%20%7C%20Phi%20%7C%20Gemma)-orange)
+![Playwright](https://img.shields.io/badge/Browser-Playwright%20Work%20Agent-green?logo=playwright)
+![LangChain](https://img.shields.io/badge/Orchestration-LangChain%20%2B%20LangGraph%20%2B%20CrewAI-purple)
+![Security](https://img.shields.io/badge/Security-Local%20Fernet%20Vault%20%2B%20Human%20Handoff-red)
+![Telegram](https://img.shields.io/badge/Interface-Telegram%20Bot%20%2B%20Voice%20%2B%20Vision-blue?logo=telegram)
 
 ---
 
-## 🏗️ Architecture
+## 🌟 What is Nexus AI?
+
+Nexus AI is not just a chatbot or a simple PC automation script. It is an **Autonomous Digital Coworker & OS Automation Engine** capable of completing multi-step objectives from start to finish.
+
+Whether you need to:
+* 💻 **Develop and debug software** — The **Autonomous Coding Agent** uses AST indexing to inspect repos, diagnose errors, apply targeted diff patches, and run tests.
+* 🌐 **Complete end-to-end web workflows** — The **Browser Work Agent** navigates complex portals, bypasses 2FA/CAPTCHA via **Human Handoff**, injects encrypted credentials safely, autofills forms, and downloads/organizes reports.
+* 📊 **Generate executive deliverables** — Creates modern **16:9 PowerPoint (.pptx) presentations**, renders **3D scenes in Blender**, analyzes financial markets with candlestick charts, or transcribes audio meetings.
+* 🖥️ **Control and self-heal your operating system** — Manages processes, diagnoses failing commands with the **Self-Healing Pipeline**, and handles dangerous tasks via gated Telegram approvals.
+
+---
+
+## 🏛️ Comprehensive Architecture
 
 ```mermaid
 graph TD
-    User([👤 User]) -->|Natural Language Goal| TG[📱 Telegram Bot]
-    TG -->|Validated Request| API[🚀 FastAPI Backend]
+    subgraph Interfaces ["📱 Multimodal Interfaces"]
+        User([👤 User]) --> TG[📱 Telegram Bot with Token Streaming]
+        User --> Voice[🎙️ Voice Speech-to-Intent]
+        User --> WebUI[📊 Next.js Dashboard & FastAPI REST]
+    end
 
-    API --> PA[🧠 Planner Agent\nLangChain + CrewAI + Llama 3]
-    PA -->|TaskGraph| CREW[🤖 CrewAI Orchestrator]
+    subgraph CoreEngine ["🧠 Planner & Intent Engine"]
+        TG & Voice & WebUI --> Router[⚡ 0ms Fast-Path Intent Router]
+        Router --> Planner[🧠 Planner Agent & LangGraph Orchestrator]
+        Planner --> EventBus[⚡ Redis / In-Memory Event Bus]
+    end
 
-    CREW --> SA[⚙️ System Agent\nCPU · RAM · Battery · Processes]
-    CREW --> AA[📱 Application Agent\nOpen · Close · Launch · Browser]
-    CREW --> FA[📁 File Agent\nSearch · Move · Compress · Organize]
+    subgraph AutonomousAgents ["🤖 Autonomous Agent Workforce"]
+        EventBus --> CodingAgent[💻 Autonomous Coding Agent\nAST Index · Code Repair · Test Runner]
+        EventBus --> BrowserAgent[🌐 Browser Work Agent\nPlaywright · DOM Tree · Download Organizer]
+        EventBus --> AppArchitect[🏗️ App Architect Agent\nIsolated Venv · Pip Auto-Heal · Smoke Test]
+        EventBus --> PresAgent[📊 Presentation Agent\n16:9 Widescreen python-pptx]
+        EventBus --> BlenderAgent[🎨 Blender 3D Agent\nProcedural bpy Scene Synthesis]
+        EventBus --> ResearchAgent[🔍 Deep Research Agent\nMulti-Query Synthesis]
+        EventBus --> FinanceAgent[📈 Financial Sentinel\nReal-time Tickers & Candlestick Charts]
+        EventBus --> CouncilAgent[⚖️ Council of Experts\nMulti-LLM Debate & Consensus]
+        EventBus --> DocQAAgent[📄 Document QA Agent\nChromaDB Vector Retrieval]
+        EventBus --> SystemAgent[⚙️ Windows OS & Vision Agent\npsutil · Screen OCR · Omni-GUI]
+    end
 
-    SA & AA & FA -->|Read State| DT[🖥️ Digital Twin\nLive OS Model]
-    DT -->|Continuous Updates| OS[🪟 Windows OS\npsutil · pywin32]
+    subgraph SecurityAndMemory ["🔒 Security, Memory & Handoff"]
+        BrowserAgent --> CredVault[🔐 Fernet-Encrypted Credential Vault]
+        BrowserAgent --> ProfileStore[📝 User Profile Autofill Store]
+        BrowserAgent & CodingAgent --> Handoff[✋ Human Handoff Engine\n2FA/OTP · CAPTCHAs · State Verification]
+        Handoff <-->|Interactive Buttons| TG
+        Planner <--> ChromaDB[(🧠 ChromaDB Vector Store)]
+        SystemAgent --> ApprovalCenter[⚠️ Security Policy & Approval Center]
+    end
 
-    PA -->|Semantic Retrieval| MEM[🧠 ChromaDB\nLong-Term Memory]
-    PA -->|Dangerous Action| AC[🔒 Approval Center\nTelegram Approve/Reject]
-
-    CREW -->|Results| HM[💓 Health Monitor\nPredictive Alerts]
-    CREW -->|Audit Entry| DB[(🗄️ PostgreSQL\nAudit · History)]
-    CREW -->|Cache| RD[(⚡ Redis\nQueue · Cache)]
-
-    N8N[⚙️ n8n Workflows\nMorning Brief · Backup · Security] -->|POST /planner/execute| API
-
-    API -->|SSE Stream| FE[📊 Next.js Dashboard\nLive Metrics · Approvals · Logs]
-
-    style PA fill:#7c3aed,color:#fff
-    style CREW fill:#3b82f6,color:#fff
-    style DT fill:#06b6d4,color:#fff
-    style AC fill:#f59e0b,color:#000
-    style MEM fill:#10b981,color:#fff
+    style CodingAgent fill:#2563eb,color:#fff
+    style BrowserAgent fill:#059669,color:#fff
+    style Handoff fill:#d97706,color:#fff
+    style CredVault fill:#dc2626,color:#fff
+    style Planner fill:#7c3aed,color:#fff
 ```
 
 ---
 
-## 🤖 AI Agents
+## 🤖 The Autonomous Agent Workforce
 
-| Agent | Responsibility | Tools |
-|---|---|---|
-| **Planner** | Decompose goals → TaskGraph | LangChain, CrewAI, Llama 3 |
-| **System** | OS monitoring, processes, power | psutil, Digital Twin API |
-| **Application** | Open/close apps, browser, shell | subprocess, pywin32 |
-| **File** | Search, move, compress, organize | pathlib, shutil, zipfile |
-
----
-
-## ⚙️ n8n Workflows
-
-| Workflow | Trigger | Action |
-|---|---|---|
-| ☀️ Morning Brief | Daily 8:00 AM | System health + summary via Telegram |
-| 💾 Automatic Backup | Daily 11:00 PM | Compress + archive key folders |
-| 💻 Coding Workspace | Webhook | Launch full dev environment |
-| 📁 Download Organizer | Weekly Sunday | AI-classify + move Downloads files |
-| 🔒 Security Monitor | Every 30 min | Scan processes + USB + alert on threats |
+| Agent | Core Capabilities & Deliverables | Primary Tools |
+| :--- | :--- | :--- |
+| **🌐 Browser Work Agent** | Closed-loop web navigation, semantic DOM/accessibility tree analysis, form autofill, safe credential injection, and download file organization. | Playwright, ARIA DOM snapshot, DuckDuckGo |
+| **💻 Autonomous Coding Agent** | Multi-step software engineer: AST repository indexing, targeted symbol retrieval, root cause diagnosis, syntax-validated diff patching, and pytest execution. | AST parser, pytest runner, uvicorn/node dev server |
+| **✋ Human Handoff Engine** | State machine lifecycle for handling 2FA/OTP, CAPTCHA challenges, and sensitive approvals with post-handoff state verification. | Telegram inline callbacks, DOM state verifiers |
+| **📊 Presentation Agent** | Designs and builds structured, professional 16:9 widescreen PowerPoint (`.pptx`) decks with custom themes and structured slide layouts. | `python-pptx`, dynamic layout engine |
+| **🏗️ App Architect Agent** | End-to-end full stack app generator with automated venv creation, AST dependency resolver, and pre-flight headless smoke testing. | Subprocess venv, pip resolver, smoke test verifier |
+| **🎨 Blender 3D Agent** | Procedural 3D scene generation, lighting, materials, physics, and rendering via headless Blender Python (`bpy`). | Blender CLI, `bpy` scripts |
+| **📈 Financial & Market Sentinel**| Real-time stock, crypto, and commodity analysis with technical indicators and generated candlestick charts. | `yfinance`, `mplfinance` |
+| **⚖️ Council of Experts** | Multi-persona debate engine (Architect, Critic, Implementer) for complex architectural and strategic decisions. | Multi-role Ollama prompts |
+| **📄 Document & PDF Q&A** | Ingests PDFs, documents, and codebases into ChromaDB vector memory for semantic multi-turn Q&A. | ChromaDB, PyPDF2, local embeddings |
+| **📧 Email & n8n Workflows** | Drafts context-aware emails with attachments and dispatches via Gmail SMTP or n8n webhooks. | Gmail SMTP, n8n webhook API |
+| **🎙️ Voice & Audio Assistant** | Continuous voice listening, speech-to-intent parsing, meeting audio transcription, and action item extraction. | SpeechRecognition, pyttsx3, audio pipeline |
+| **👁️ Vision & Omni-GUI Copilot** | Screen OCR, error boundary scanning, viewport analysis, and PyAutoGUI mouse/keyboard coordinate automation. | Tesseract OCR, PyAutoGUI, Gemma vision |
 
 ---
 
-## 🚀 Quick Start
+## 🔐 Privacy & Security Model
+
+Nexus AI is engineered from the ground up for **100% sovereign, local execution**:
+1. **Zero Secret Leakage to LLMs**: Credentials and passwords stored in the **Credential Vault** are encrypted using PBKDF2 + AES (Fernet) and injected directly into DOM elements by Playwright — secrets never enter prompt contexts or logs.
+2. **Deterministic Safety Boundaries**: Critical operating system modifications and destructive shell commands are gated behind Telegram **Approve / Reject** inline buttons via the **Security Policy Engine**.
+3. **Local Models Only**: Optimized to run with zero cloud API keys using local Ollama models (`llama3:latest`, `qwen3:4b`, `phi4-mini:latest`, `gemma3:4b`).
+
+---
+
+## ⚡ Quick Start Guide
 
 ### Prerequisites
-
-- **Windows 10/11**
-- **Docker Desktop** installed and running
-- **Ollama** with Llama 3 already pulled:
-  ```bash
-  ollama pull llama3
-  ollama serve   # must be running on port 11434
+* **Operating System**: Windows 10/11
+* **Python**: Python 3.11+
+* **Local LLM Engine**: [Ollama](https://ollama.com/) running locally:
+  ```powershell
+  ollama pull llama3:latest
+  ollama pull qwen3:4b
+  ollama pull phi4-mini:latest
   ```
-- **Telegram bot token** from [@BotFather](https://t.me/BotFather)
 
-### 1. Clone & Configure
+### Installation
+1. **Clone the Repository**:
+   ```powershell
+   git clone https://github.com/CHARANSENTHIL/Nexus_Ai.git
+   cd Nexus_Ai
+   ```
 
-```bash
-git clone https://github.com/yourusername/nexus-ai.git
-cd nexus-ai
-cp .env.example .env
-```
+2. **Create Virtual Environment & Install Dependencies**:
+   ```powershell
+   python -m venv .venv
+   .venv\Scripts\activate
+   pip install -r backend/requirements.txt
+   playwright install chromium msedge
+   ```
 
-Edit `.env` and fill in:
-```env
-TELEGRAM_BOT_TOKEN=your_bot_token_from_botfather
-TELEGRAM_CHAT_ID=your_telegram_chat_id
-TELEGRAM_ALLOWED_USER_IDS=your_telegram_user_id
-SECRET_KEY=generate-with-python-secrets-token-hex-32
-```
+3. **Configure Environment (`backend/.env`)**:
+   ```env
+   TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+   TELEGRAM_ALLOWED_USER_IDS=[your_telegram_user_id]
+   OLLAMA_BASE_URL=http://127.0.0.1:11434
+   GMAIL_SENDER=your_email@gmail.com
+   GMAIL_APP_PASSWORD=your_gmail_app_password
+   ```
 
-> **Get your Telegram user ID:** Message [@userinfobot](https://t.me/userinfobot) on Telegram.
+4. **Launch Nexus AI**:
+   ```powershell
+   # Start the Telegram Bot & Autonomous Workforce
+   python backend/run_bot.py
 
-### 2. Launch with Docker Compose
-
-```bash
-docker compose up --build
-```
-
-This starts:
-| Service | URL |
-|---|---|
-| 🚀 FastAPI Backend | http://localhost:8000 |
-| 📊 Dashboard | http://localhost:3000 |
-| ⚙️ n8n | http://localhost:5678 |
-| 🗄️ PostgreSQL | localhost:5432 |
-| ⚡ Redis | localhost:6379 |
-| 🧠 ChromaDB | localhost:8001 |
-
-### 3. Verify
-
-```bash
-curl http://localhost:8000/health
-# {"status":"healthy"}
-```
-
-Open http://localhost:3000 to see the live dashboard.
-
-Send a message to your Telegram bot:
-> *"Check my system health"*
+   # (Optional) Start the FastAPI Backend Server
+   python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+   ```
 
 ---
 
-## 🛠️ Local Development (Without Docker)
+## 💡 Example Prompts & Capabilities
 
-```bash
-# Create and activate virtual environment
-python -m venv .venv
-.venv\Scripts\activate   # Windows PowerShell
+Send any of these natural language goals directly to your Telegram Bot:
 
-# Install backend dependencies
-cd backend
-pip install -r requirements.txt
+### 🌐 Autonomous Web & Research
+* *"Go to student portal https://portal.myuniversity.edu and download my latest grade report"*
+* *"Search DuckDuckGo for top open-source AI frameworks in 2026 and summarize findings"*
+* *"Login to https://github.com/login and verify my repository stars"*
 
-# Run backend
-uvicorn app.main:app --reload --port 8000
+### 💻 Software Engineering & Self-Healing
+* *"Search codebase symbols for HandoffEngine and show me its outline"*
+* *"Run pytest across the test suite and fix any failing test cases"*
+* *"Create a new FastAPI service in generated_apps with CRUD endpoints and pre-flight verify it"*
 
-# In a new terminal — run frontend
-cd frontend
-npm install
-npm run dev
-```
-
----
-
-## 📋 API Reference
-
-### `POST /api/v1/planner/execute`
-Execute a natural language goal via the AI pipeline.
-
-**Request:**
-```json
-{
-  "goal": "Prepare my laptop for coding",
-  "user_id": "user123",
-  "context": {}
-}
-```
-
-**Response:**
-```json
-{
-  "task_id": "uuid",
-  "status": "completed",
-  "subtasks": [
-    {"id": "task_1", "title": "Check system health", "agent": "system", "status": "completed"}
-  ],
-  "result": {"summary": "All tasks completed successfully"},
-  "execution_time_seconds": 8.4
-}
-```
-
-### `GET /api/v1/metrics/stream`
-SSE stream of live system metrics (CPU, RAM, disk, battery, network) — updates every 3 seconds.
-
-### `GET /api/v1/digital-twin/state`
-Returns the current Digital Twin system snapshot.
-
-### `GET /api/v1/planner/audit-log?limit=50`
-Returns the last N audit log entries.
-
-### `GET /api/v1/planner/pending-approvals`
-Lists all dangerous actions awaiting Telegram approval.
-
-### `POST /api/v1/planner/resolve-approval`
-Resolve a pending approval from the dashboard UI.
+### 📊 Presentations & Media
+* *"Create an 8-slide presentation deck on Autonomous AI Agents in 2026 and mail it to my email"*
+* *"Render a 3D procedural metallic torus in Blender with smooth lighting"*
+* *"Analyze current Bitcoin market trends and send the candlestick chart"*
 
 ---
 
-## 🔒 Security
+## 🧪 Verification & Testing
 
-- **Telegram whitelist** — only authorized user IDs can interact with the bot
-- **JWT authentication** — all internal API calls require a signed token
-- **Approval Center** — dangerous actions (file delete, shutdown, process kill) are blocked until explicit approval
-- **Audit log** — every action logged with timestamp, user, reasoning, and outcome
-- **No hardcoded secrets** — all credentials via `.env` / environment variables
+Nexus AI includes an automated test suite verifying all autonomous modules:
 
----
+```powershell
+# Run the autonomous module verification suite
+python -m unittest backend/test_all_modules_suite.py
 
-## 🧪 Testing
-
-```bash
-# Activate venv first
-.venv\Scripts\activate
-
-cd backend
-pytest tests/ -v
-
-# Run specific test file
-pytest tests/test_agent_tools.py -v
+# Run live interactive input verification
+python backend/verify_live_demo.py
 ```
-
-**Test coverage:**
-- `test_digital_twin.py` — Digital Twin service
-- `test_health_monitor.py` — Predictive health alerts
-- `test_auth.py` — JWT + whitelist
-- `test_db_connectors.py` — DB/Redis/Chroma connections
-- `test_api.py` — REST endpoints
-- `test_agent_tools.py` — 23 agent tool tests
-
----
-
-## 📁 Project Structure
-
-```
-nexus_ai/
-├── backend/
-│   ├── app/
-│   │   ├── main.py               # FastAPI entry point
-│   │   ├── config.py             # Env-based settings
-│   │   ├── auth/                 # JWT + Telegram whitelist
-│   │   ├── db/                   # PostgreSQL, Redis, ChromaDB clients
-│   │   ├── digital_twin/         # Live OS Digital Twin service
-│   │   ├── health_monitor/       # Predictive health background worker
-│   │   ├── memory/               # ChromaDB vector memory store
-│   │   ├── agents/
-│   │   │   ├── planner.py        # LangChain + CrewAI Planner Agent
-│   │   │   ├── system_agent.py   # System Agent (CrewAI)
-│   │   │   ├── application_agent.py
-│   │   │   ├── file_agent.py
-│   │   │   └── tools/            # OS tools (psutil, pywin32, pathlib)
-│   │   ├── approval/             # Approval Center + Self-Healing Executor
-│   │   ├── telegram_bot/         # Telegram bot handler
-│   │   └── api/                  # FastAPI routers
-│   ├── tests/                    # Unit tests
-│   ├── Dockerfile
-│   └── requirements.txt
-├── frontend/                     # Next.js 14 dashboard
-├── n8n/workflows/                # 5 n8n workflow JSONs
-├── .github/workflows/ci.yml      # GitHub Actions CI
-├── docker-compose.yml
-├── .env.example
-└── README.md
-```
-
----
-
-## 🎯 Roadmap
-
-- [ ] Browser Agent (OCR, web scraping, tab management)
-- [ ] Screen Understanding Agent (EasyOCR, OpenCV)
-- [ ] GitHub Agent (repo monitoring, PR summaries)
-- [ ] Voice interface (Speech-to-Text + Text-to-Speech)
-- [ ] Plugin system for custom agents
-- [ ] Cross-device sync
-- [ ] Kubernetes deployment manifests
 
 ---
 
 ## 📄 License
 
-MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-*Built with ❤️ using LangChain · CrewAI · Llama 3 · FastAPI · Next.js · n8n*
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
