@@ -191,7 +191,7 @@ Run the comprehensive test and evaluation suites:
 python backend/evals/eval_runner.py
 
 # 2. Run the unit & integration test suite
-python -m unittest backend/test_all_modules_suite.py
+python backend/test_all_modules_suite.py
 
 # 3. Run live demo interactive verification
 python backend/verify_live_demo.py
