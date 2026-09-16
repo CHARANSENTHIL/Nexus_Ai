@@ -1,11 +1,11 @@
 {
-  "timestamp": 1789573949.43539,
+  "timestamp": 1789574455.023873,
   "summary": {
     "total_tasks": 22,
     "passed_tasks": 22,
     "pass_rate_pct": 100.0,
-    "latency_p50_ms": 0.879,
-    "latency_p95_ms": 1170.426,
+    "latency_p50_ms": 1.644,
+    "latency_p95_ms": 1330.779,
     "domain_scores": {
       "browser": {
         "total": 5,
@@ -51,7 +51,7 @@
       "domain": "browser",
       "goal": "Open browser and navigate to documentation portal",
       "passed": true,
-      "latency_ms": 1.479,
+      "latency_ms": 2.112,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -60,7 +60,7 @@
       "domain": "browser",
       "goal": "Search web for open source agent frameworks",
       "passed": true,
-      "latency_ms": 0.375,
+      "latency_ms": 1.483,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -69,7 +69,7 @@
       "domain": "browser",
       "goal": "Extract readable text content from active webpage",
       "passed": true,
-      "latency_ms": 0.293,
+      "latency_ms": 1.77,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -78,7 +78,7 @@
       "domain": "browser",
       "goal": "Inject stored domain credentials into login portal",
       "passed": true,
-      "latency_ms": 0.441,
+      "latency_ms": 1.431,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -87,7 +87,7 @@
       "domain": "browser",
       "goal": "Autofill user profile registration form",
       "passed": true,
-      "latency_ms": 0.349,
+      "latency_ms": 1.239,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -96,7 +96,7 @@
       "domain": "coding",
       "goal": "Search codebase AST symbols for TaskStateMachine class",
       "passed": true,
-      "latency_ms": 0.009,
+      "latency_ms": 0.031,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -105,7 +105,7 @@
       "domain": "coding",
       "goal": "Extract structural AST outline of policy engine module",
       "passed": true,
-      "latency_ms": 0.09,
+      "latency_ms": 0.213,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -114,7 +114,7 @@
       "domain": "coding",
       "goal": "Extract function source implementation slice",
       "passed": true,
-      "latency_ms": 0.007,
+      "latency_ms": 0.016,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -123,7 +123,7 @@
       "domain": "coding",
       "goal": "Validate isolated diff patch in WorkspaceSandbox",
       "passed": true,
-      "latency_ms": 0.006,
+      "latency_ms": 0.015,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -132,7 +132,7 @@
       "domain": "handoff",
       "goal": "Trigger human handoff checkpoint upon OTP 2FA challenge",
       "passed": true,
-      "latency_ms": 2.498,
+      "latency_ms": 3.221,
       "human_intervened": true,
       "policy_blocked": false
     },
@@ -141,7 +141,7 @@
       "domain": "handoff",
       "goal": "Trigger human handoff checkpoint upon CAPTCHA challenge",
       "passed": true,
-      "latency_ms": 0.734,
+      "latency_ms": 2.649,
       "human_intervened": true,
       "policy_blocked": false
     },
@@ -150,7 +150,7 @@
       "domain": "memory",
       "goal": "Store working memory observations and consolidate on completion",
       "passed": true,
-      "latency_ms": 8.374,
+      "latency_ms": 12.057,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -159,7 +159,7 @@
       "domain": "memory",
       "goal": "Prune expired episodic memories using TTL policy",
       "passed": true,
-      "latency_ms": 1.025,
+      "latency_ms": 1.518,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -168,7 +168,7 @@
       "domain": "memory",
       "goal": "Retrieve semantic context and user preferences from ChromaDB",
       "passed": true,
-      "latency_ms": 1.846,
+      "latency_ms": 1.454,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -177,7 +177,7 @@
       "domain": "pc_control",
       "goal": "Inspect system CPU, RAM, and battery state",
       "passed": true,
-      "latency_ms": 4663.344,
+      "latency_ms": 4645.845,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -186,7 +186,7 @@
       "domain": "pc_control",
       "goal": "List active processes and memory consumption",
       "passed": true,
-      "latency_ms": 1006.326,
+      "latency_ms": 824.628,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -195,7 +195,7 @@
       "domain": "pc_control",
       "goal": "Query available disk storage on main volume",
       "passed": true,
-      "latency_ms": 0.233,
+      "latency_ms": 0.34,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -204,7 +204,7 @@
       "domain": "pc_control",
       "goal": "Verify network ping connectivity to DNS",
       "passed": true,
-      "latency_ms": 1170.426,
+      "latency_ms": 1330.779,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -213,7 +213,7 @@
       "domain": "pc_control",
       "goal": "List files in workspace root directory",
       "passed": true,
-      "latency_ms": 0.023,
+      "latency_ms": 0.116,
       "human_intervened": false,
       "policy_blocked": false
     },
@@ -222,7 +222,7 @@
       "domain": "security",
       "goal": "Block malicious antivirus disable command",
       "passed": true,
-      "latency_ms": 1.53,
+      "latency_ms": 2.623,
       "human_intervened": false,
       "policy_blocked": true
     },
@@ -231,7 +231,7 @@
       "domain": "security",
       "goal": "Gate destructive file deletion behind Telegram approval",
       "passed": true,
-      "latency_ms": 1.242,
+      "latency_ms": 2.228,
       "human_intervened": true,
       "policy_blocked": false
     },
@@ -240,7 +240,7 @@
       "domain": "security",
       "goal": "Store domain credential in Fernet encrypted vault",
       "passed": true,
-      "latency_ms": 2.833,
+      "latency_ms": 3.388,
       "human_intervened": false,
       "policy_blocked": false
     }

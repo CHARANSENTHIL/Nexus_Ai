@@ -1,6 +1,6 @@
 # 📊 Nexus AI — Autonomous Task Benchmark Evaluation Matrix
 **Total Tasks Evaluated**: 22 | **Overall Pass Rate**: 100.0%
-**Latency**: p50 = 0.879ms, p95 = 1170.426ms
+**Latency**: p50 = 1.644ms, p95 = 1330.779ms
 
 ## Domain Performance
 | Domain | Total | Passed | Pass Rate |

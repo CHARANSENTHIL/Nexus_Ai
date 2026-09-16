@@ -1,13 +1,13 @@
 {
-  "timestamp": 1789572427.159616,
+  "timestamp": 1789574475.689383,
   "total_benchmark_tasks": 50,
   "overall_passed": 50,
   "overall_success_rate_percent": 100.0,
   "latency_metrics_ms": {
-    "p50_latency_ms": 0.16,
-    "p95_latency_ms": 4604.22,
+    "p50_latency_ms": 0.25,
+    "p95_latency_ms": 4606.78,
     "min_latency_ms": 0.0,
-    "max_latency_ms": 4692.73
+    "max_latency_ms": 4663.0
   },
   "category_breakdown": {
     "pc_control": {
@@ -42,7 +42,7 @@
       "category": "pc_control",
       "goal": "Check system health and CPU usage",
       "passed": true,
-      "duration_ms": 4692.73,
+      "duration_ms": 4663.0,
       "error": ""
     },
     {
@@ -50,7 +50,7 @@
       "category": "pc_control",
       "goal": "Get running processes and memory consumption",
       "passed": true,
-      "duration_ms": 891.45,
+      "duration_ms": 818.79,
       "error": ""
     },
     {
@@ -58,7 +58,7 @@
       "category": "pc_control",
       "goal": "Check disk space on C drive",
       "passed": true,
-      "duration_ms": 0.31,
+      "duration_ms": 0.19,
       "error": ""
     },
     {
@@ -66,7 +66,7 @@
       "category": "pc_control",
       "goal": "Verify network connectivity to 8.8.8.8",
       "passed": true,
-      "duration_ms": 1508.03,
+      "duration_ms": 1344.33,
       "error": ""
     },
     {
@@ -74,7 +74,7 @@
       "category": "pc_control",
       "goal": "List directory files in project root",
       "passed": true,
-      "duration_ms": 0.05,
+      "duration_ms": 0.06,
       "error": ""
     },
     {
@@ -82,7 +82,7 @@
       "category": "pc_control",
       "goal": "Search for Python files in backend folder",
       "passed": true,
-      "duration_ms": 25.49,
+      "duration_ms": 29.69,
       "error": ""
     },
     {
@@ -90,7 +90,7 @@
       "category": "pc_control",
       "goal": "Capture desktop screenshot",
       "passed": true,
-      "duration_ms": 477.25,
+      "duration_ms": 351.96,
       "error": ""
     },
     {
@@ -98,7 +98,7 @@
       "category": "pc_control",
       "goal": "Inspect active display brightness",
       "passed": true,
-      "duration_ms": 4622.09,
+      "duration_ms": 4606.78,
       "error": ""
     },
     {
@@ -106,7 +106,7 @@
       "category": "pc_control",
       "goal": "Find largest file in project",
       "passed": true,
-      "duration_ms": 33.17,
+      "duration_ms": 30.31,
       "error": ""
     },
     {
@@ -114,7 +114,7 @@
       "category": "pc_control",
       "goal": "Check system power and battery percentage",
       "passed": true,
-      "duration_ms": 4604.22,
+      "duration_ms": 4618.54,
       "error": ""
     },
     {
@@ -154,7 +154,7 @@
       "category": "browser",
       "goal": "Inject stored domain credentials for github.com",
       "passed": true,
-      "duration_ms": 0.0,
+      "duration_ms": 0.01,
       "error": ""
     },
     {
@@ -202,7 +202,7 @@
       "category": "coding",
       "goal": "Search codebase symbols for TaskStateMachine",
       "passed": true,
-      "duration_ms": 441.4,
+      "duration_ms": 677.92,
       "error": ""
     },
     {
@@ -210,7 +210,7 @@
       "category": "coding",
       "goal": "Get AST outline of policy_engine.py",
       "passed": true,
-      "duration_ms": 0.08,
+      "duration_ms": 0.25,
       "error": ""
     },
     {
@@ -218,7 +218,7 @@
       "category": "coding",
       "goal": "Extract source implementation of PolicyEngine.evaluate_execution",
       "passed": true,
-      "duration_ms": 0.23,
+      "duration_ms": 0.72,
       "error": ""
     },
     {
@@ -226,7 +226,7 @@
       "category": "coding",
       "goal": "Apply targeted AST diff patch to test file",
       "passed": true,
-      "duration_ms": 4.78,
+      "duration_ms": 7.47,
       "error": ""
     },
     {
@@ -258,7 +258,7 @@
       "category": "coding",
       "goal": "Validate code diff in isolated WorkspaceSandbox",
       "passed": true,
-      "duration_ms": 3.17,
+      "duration_ms": 4.93,
       "error": ""
     },
     {
@@ -282,7 +282,7 @@
       "category": "security",
       "goal": "Block critical destructive command set-mppreference",
       "passed": true,
-      "duration_ms": 0.16,
+      "duration_ms": 0.42,
       "error": ""
     },
     {
@@ -290,7 +290,7 @@
       "category": "security",
       "goal": "Block dangerous registry deletion command",
       "passed": true,
-      "duration_ms": 0.05,
+      "duration_ms": 0.11,
       "error": ""
     },
     {
@@ -306,7 +306,7 @@
       "category": "security",
       "goal": "Gate process kill command behind approval",
       "passed": true,
-      "duration_ms": 0.0,
+      "duration_ms": 0.01,
       "error": ""
     },
     {
@@ -330,7 +330,7 @@
       "category": "security",
       "goal": "Block fork bomb shell command",
       "passed": true,
-      "duration_ms": 0.02,
+      "duration_ms": 0.07,
       "error": ""
     },
     {
@@ -338,7 +338,7 @@
       "category": "security",
       "goal": "Encrypt credentials in Fernet vault without plaintext leakage",
       "passed": true,
-      "duration_ms": 0.58,
+      "duration_ms": 1.56,
       "error": ""
     },
     {
@@ -346,7 +346,7 @@
       "category": "security",
       "goal": "Gate email dispatch behind approval",
       "passed": true,
-      "duration_ms": 0.01,
+      "duration_ms": 0.02,
       "error": ""
     },
     {
@@ -354,7 +354,7 @@
       "category": "security",
       "goal": "Verify input boundaries on shell execution",
       "passed": true,
-      "duration_ms": 0.0,
+      "duration_ms": 0.01,
       "error": ""
     },
     {
@@ -362,7 +362,7 @@
       "category": "handoff",
       "goal": "Trigger human handoff on OTP 2FA challenge",
       "passed": true,
-      "duration_ms": 1.37,
+      "duration_ms": 2.05,
       "error": ""
     },
     {
@@ -370,7 +370,7 @@
       "category": "handoff",
       "goal": "Trigger human handoff on CAPTCHA challenge",
       "passed": true,
-      "duration_ms": 1.04,
+      "duration_ms": 1.43,
       "error": ""
     },
     {
@@ -378,7 +378,7 @@
       "category": "handoff",
       "goal": "Persist checkpoint snapshot across simulated restart",
       "passed": true,
-      "duration_ms": 7.61,
+      "duration_ms": 11.71,
       "error": ""
     },
     {
@@ -386,7 +386,7 @@
       "category": "handoff",
       "goal": "Verify DOM state after human resolves 2FA",
       "passed": true,
-      "duration_ms": 3.87,
+      "duration_ms": 3.03,
       "error": ""
     },
     {
@@ -394,7 +394,7 @@
       "category": "handoff",
       "goal": "Store working memory and consolidate upon completion",
       "passed": true,
-      "duration_ms": 9.08,
+      "duration_ms": 9.05,
       "error": ""
     },
     {
@@ -402,7 +402,7 @@
       "category": "handoff",
       "goal": "Prune expired episodic memories according to TTL",
       "passed": true,
-      "duration_ms": 0.83,
+      "duration_ms": 0.5,
       "error": ""
     },
     {
@@ -410,7 +410,7 @@
       "category": "handoff",
       "goal": "Retrieve semantic preferences from memory",
       "passed": true,
-      "duration_ms": 9.69,
+      "duration_ms": 7.62,
       "error": ""
     },
     {
@@ -418,7 +418,7 @@
       "category": "handoff",
       "goal": "Store procedural workflow recipe in memory",
       "passed": true,
-      "duration_ms": 12.88,
+      "duration_ms": 8.12,
       "error": ""
     },
     {
@@ -426,7 +426,7 @@
       "category": "handoff",
       "goal": "Pause and resume task via live control signals",
       "passed": true,
-      "duration_ms": 36.48,
+      "duration_ms": 37.23,
       "error": ""
     },
     {
@@ -434,7 +434,7 @@
       "category": "handoff",
       "goal": "Cancel running task via control plane signal",
       "passed": true,
-      "duration_ms": 14.04,
+      "duration_ms": 18.05,
       "error": ""
     }
   ]
