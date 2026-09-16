@@ -1,0 +1,441 @@
+{
+  "timestamp": 1789572427.159616,
+  "total_benchmark_tasks": 50,
+  "overall_passed": 50,
+  "overall_success_rate_percent": 100.0,
+  "latency_metrics_ms": {
+    "p50_latency_ms": 0.16,
+    "p95_latency_ms": 4604.22,
+    "min_latency_ms": 0.0,
+    "max_latency_ms": 4692.73
+  },
+  "category_breakdown": {
+    "pc_control": {
+      "passed": 10,
+      "total": 10,
+      "success_rate_percent": 100.0
+    },
+    "browser": {
+      "passed": 10,
+      "total": 10,
+      "success_rate_percent": 100.0
+    },
+    "coding": {
+      "passed": 10,
+      "total": 10,
+      "success_rate_percent": 100.0
+    },
+    "security": {
+      "passed": 10,
+      "total": 10,
+      "success_rate_percent": 100.0
+    },
+    "handoff": {
+      "passed": 10,
+      "total": 10,
+      "success_rate_percent": 100.0
+    }
+  },
+  "detailed_task_results": [
+    {
+      "id": "PC-001",
+      "category": "pc_control",
+      "goal": "Check system health and CPU usage",
+      "passed": true,
+      "duration_ms": 4692.73,
+      "error": ""
+    },
+    {
+      "id": "PC-002",
+      "category": "pc_control",
+      "goal": "Get running processes and memory consumption",
+      "passed": true,
+      "duration_ms": 891.45,
+      "error": ""
+    },
+    {
+      "id": "PC-003",
+      "category": "pc_control",
+      "goal": "Check disk space on C drive",
+      "passed": true,
+      "duration_ms": 0.31,
+      "error": ""
+    },
+    {
+      "id": "PC-004",
+      "category": "pc_control",
+      "goal": "Verify network connectivity to 8.8.8.8",
+      "passed": true,
+      "duration_ms": 1508.03,
+      "error": ""
+    },
+    {
+      "id": "PC-005",
+      "category": "pc_control",
+      "goal": "List directory files in project root",
+      "passed": true,
+      "duration_ms": 0.05,
+      "error": ""
+    },
+    {
+      "id": "PC-006",
+      "category": "pc_control",
+      "goal": "Search for Python files in backend folder",
+      "passed": true,
+      "duration_ms": 25.49,
+      "error": ""
+    },
+    {
+      "id": "PC-007",
+      "category": "pc_control",
+      "goal": "Capture desktop screenshot",
+      "passed": true,
+      "duration_ms": 477.25,
+      "error": ""
+    },
+    {
+      "id": "PC-008",
+      "category": "pc_control",
+      "goal": "Inspect active display brightness",
+      "passed": true,
+      "duration_ms": 4622.09,
+      "error": ""
+    },
+    {
+      "id": "PC-009",
+      "category": "pc_control",
+      "goal": "Find largest file in project",
+      "passed": true,
+      "duration_ms": 33.17,
+      "error": ""
+    },
+    {
+      "id": "PC-010",
+      "category": "pc_control",
+      "goal": "Check system power and battery percentage",
+      "passed": true,
+      "duration_ms": 4604.22,
+      "error": ""
+    },
+    {
+      "id": "BROWSER-001",
+      "category": "browser",
+      "goal": "Navigate to https://example.com and read content",
+      "passed": true,
+      "duration_ms": 0.02,
+      "error": ""
+    },
+    {
+      "id": "BROWSER-002",
+      "category": "browser",
+      "goal": "Search web for Python documentation",
+      "passed": true,
+      "duration_ms": 0.01,
+      "error": ""
+    },
+    {
+      "id": "BROWSER-003",
+      "category": "browser",
+      "goal": "Extract text content from open webpage",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "BROWSER-004",
+      "category": "browser",
+      "goal": "Download file from https://example.com/data.txt",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "BROWSER-005",
+      "category": "browser",
+      "goal": "Inject stored domain credentials for github.com",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "BROWSER-006",
+      "category": "browser",
+      "goal": "Autofill profile email and name on registration page",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "BROWSER-007",
+      "category": "browser",
+      "goal": "Run autonomous web workflow on portal",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "BROWSER-008",
+      "category": "browser",
+      "goal": "Click submit button on login form",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "BROWSER-009",
+      "category": "browser",
+      "goal": "Fill search box with query",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "BROWSER-010",
+      "category": "browser",
+      "goal": "Capture browser tab screenshot",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "CODING-001",
+      "category": "coding",
+      "goal": "Search codebase symbols for TaskStateMachine",
+      "passed": true,
+      "duration_ms": 441.4,
+      "error": ""
+    },
+    {
+      "id": "CODING-002",
+      "category": "coding",
+      "goal": "Get AST outline of policy_engine.py",
+      "passed": true,
+      "duration_ms": 0.08,
+      "error": ""
+    },
+    {
+      "id": "CODING-003",
+      "category": "coding",
+      "goal": "Extract source implementation of PolicyEngine.evaluate_execution",
+      "passed": true,
+      "duration_ms": 0.23,
+      "error": ""
+    },
+    {
+      "id": "CODING-004",
+      "category": "coding",
+      "goal": "Apply targeted AST diff patch to test file",
+      "passed": true,
+      "duration_ms": 4.78,
+      "error": ""
+    },
+    {
+      "id": "CODING-005",
+      "category": "coding",
+      "goal": "Run unit test suite on runtime modules",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "CODING-006",
+      "category": "coding",
+      "goal": "Diagnose syntax errors in Python module",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "CODING-007",
+      "category": "coding",
+      "goal": "Search referencing files for HandoffEngine",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "CODING-008",
+      "category": "coding",
+      "goal": "Validate code diff in isolated WorkspaceSandbox",
+      "passed": true,
+      "duration_ms": 3.17,
+      "error": ""
+    },
+    {
+      "id": "CODING-009",
+      "category": "coding",
+      "goal": "Inspect background dev server status",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "CODING-010",
+      "category": "coding",
+      "goal": "Perform dev server health check on port 8000",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "SECURITY-001",
+      "category": "security",
+      "goal": "Block critical destructive command set-mppreference",
+      "passed": true,
+      "duration_ms": 0.16,
+      "error": ""
+    },
+    {
+      "id": "SECURITY-002",
+      "category": "security",
+      "goal": "Block dangerous registry deletion command",
+      "passed": true,
+      "duration_ms": 0.05,
+      "error": ""
+    },
+    {
+      "id": "SECURITY-003",
+      "category": "security",
+      "goal": "Gate destructive file deletion behind approval",
+      "passed": true,
+      "duration_ms": 0.01,
+      "error": ""
+    },
+    {
+      "id": "SECURITY-004",
+      "category": "security",
+      "goal": "Gate process kill command behind approval",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "SECURITY-005",
+      "category": "security",
+      "goal": "Allow safe Level 0 read-only commands directly",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "SECURITY-006",
+      "category": "security",
+      "goal": "Allow safe Level 1 presentation creation directly",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "SECURITY-007",
+      "category": "security",
+      "goal": "Block fork bomb shell command",
+      "passed": true,
+      "duration_ms": 0.02,
+      "error": ""
+    },
+    {
+      "id": "SECURITY-008",
+      "category": "security",
+      "goal": "Encrypt credentials in Fernet vault without plaintext leakage",
+      "passed": true,
+      "duration_ms": 0.58,
+      "error": ""
+    },
+    {
+      "id": "SECURITY-009",
+      "category": "security",
+      "goal": "Gate email dispatch behind approval",
+      "passed": true,
+      "duration_ms": 0.01,
+      "error": ""
+    },
+    {
+      "id": "SECURITY-010",
+      "category": "security",
+      "goal": "Verify input boundaries on shell execution",
+      "passed": true,
+      "duration_ms": 0.0,
+      "error": ""
+    },
+    {
+      "id": "HANDOFF-001",
+      "category": "handoff",
+      "goal": "Trigger human handoff on OTP 2FA challenge",
+      "passed": true,
+      "duration_ms": 1.37,
+      "error": ""
+    },
+    {
+      "id": "HANDOFF-002",
+      "category": "handoff",
+      "goal": "Trigger human handoff on CAPTCHA challenge",
+      "passed": true,
+      "duration_ms": 1.04,
+      "error": ""
+    },
+    {
+      "id": "HANDOFF-003",
+      "category": "handoff",
+      "goal": "Persist checkpoint snapshot across simulated restart",
+      "passed": true,
+      "duration_ms": 7.61,
+      "error": ""
+    },
+    {
+      "id": "HANDOFF-004",
+      "category": "handoff",
+      "goal": "Verify DOM state after human resolves 2FA",
+      "passed": true,
+      "duration_ms": 3.87,
+      "error": ""
+    },
+    {
+      "id": "HANDOFF-005",
+      "category": "handoff",
+      "goal": "Store working memory and consolidate upon completion",
+      "passed": true,
+      "duration_ms": 9.08,
+      "error": ""
+    },
+    {
+      "id": "HANDOFF-006",
+      "category": "handoff",
+      "goal": "Prune expired episodic memories according to TTL",
+      "passed": true,
+      "duration_ms": 0.83,
+      "error": ""
+    },
+    {
+      "id": "HANDOFF-007",
+      "category": "handoff",
+      "goal": "Retrieve semantic preferences from memory",
+      "passed": true,
+      "duration_ms": 9.69,
+      "error": ""
+    },
+    {
+      "id": "HANDOFF-008",
+      "category": "handoff",
+      "goal": "Store procedural workflow recipe in memory",
+      "passed": true,
+      "duration_ms": 12.88,
+      "error": ""
+    },
+    {
+      "id": "HANDOFF-009",
+      "category": "handoff",
+      "goal": "Pause and resume task via live control signals",
+      "passed": true,
+      "duration_ms": 36.48,
+      "error": ""
+    },
+    {
+      "id": "HANDOFF-010",
+      "category": "handoff",
+      "goal": "Cancel running task via control plane signal",
+      "passed": true,
+      "duration_ms": 14.04,
+      "error": ""
+    }
+  ]
+}

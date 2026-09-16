@@ -153,6 +153,27 @@ class ToolRegistry:
             execute_fn=read_page.func,
             verification_strategy="general",
         ))
+        self.register_tool(ToolDefinition(
+            name="search_web",
+            description="Search the web for query",
+            capability_level=CapabilityLevel.LEVEL_0_READ,
+            execute_fn=search_web.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="take_browser_screenshot",
+            description="Capture browser tab screenshot",
+            capability_level=CapabilityLevel.LEVEL_0_READ,
+            execute_fn=take_browser_screenshot.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="get_page_text",
+            description="Extract inner text from browser tab",
+            capability_level=CapabilityLevel.LEVEL_0_READ,
+            execute_fn=get_page_text.func,
+            verification_strategy="general",
+        ))
 
         # ── LEVEL 1: SAFE WRITE TOOLS ─────────────────────────────────────────
         self.register_tool(ToolDefinition(
@@ -161,6 +182,55 @@ class ToolRegistry:
             capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
             execute_fn=open_application.func,
             verification_strategy="process_running",
+        ))
+        self.register_tool(ToolDefinition(
+            name="open_browser",
+            description="Launch browser session",
+            capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
+            execute_fn=open_browser.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="open_url",
+            description="Navigate browser to target URL",
+            capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
+            execute_fn=open_url.func,
+            verification_strategy="browser_navigated",
+        ))
+        self.register_tool(ToolDefinition(
+            name="click_element",
+            description="Click element on web page",
+            capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
+            execute_fn=click_element.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="fill_form",
+            description="Fill text into input element",
+            capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
+            execute_fn=fill_form.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="download_file",
+            description="Download file from URL",
+            capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
+            execute_fn=download_file.func,
+            verification_strategy="file_exists",
+        ))
+        self.register_tool(ToolDefinition(
+            name="close_browser",
+            description="Close active browser session",
+            capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
+            execute_fn=close_browser.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="manage_dev_server",
+            description="Inspect or manage background dev server",
+            capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
+            execute_fn=manage_dev_server.func,
+            verification_strategy="general",
         ))
         self.register_tool(ToolDefinition(
             name="open_url_in_browser",
