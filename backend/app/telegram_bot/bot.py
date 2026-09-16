@@ -1090,10 +1090,16 @@ _global_bot_app: Optional[Application] = None
 
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handles Telegram inline button callbacks (approvals, human handoff resolution)."""
+    """Handles Telegram inline button callbacks (approvals, human handoff, and runtime control plane)."""
     query = update.callback_query
     if not query:
         return
+
+    # 1. Check if handled by Control Plane Manager (pause, resume, cancel, inspect)
+    from app.telegram_bot.control_plane import control_plane
+    if await control_plane.handle_control_callback(update, context):
+        return
+
     await query.answer()
     data = query.data or ""
     user_id = str(query.from_user.id)

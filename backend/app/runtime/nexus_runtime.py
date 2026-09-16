@@ -121,9 +121,18 @@ class NexusRuntime:
         self.state_machine.transition_state(task, TaskState.EXECUTING)
 
         for idx, subtask in enumerate(task.subtasks):
+            # Check for live cancellation
+            if self.state_machine.is_cancelled(task.task_id):
+                logger.warning(f"[Runtime] Task {task.task_id} was cancelled before step {idx+1}.")
+                return task
+
+            # Wait if task is paused
+            await self.state_machine.wait_if_paused(task.task_id)
+
             task.current_subtask_index = idx
             subtask.state = TaskState.EXECUTING
             self.state_machine.save_task(task)
+            await self._emit_progress(task, f"Executing: {subtask.title}")
 
             tool_def = self.tools.get_tool(subtask.tool_name)
             if not tool_def:

@@ -5,6 +5,7 @@ Persists task graphs, state transitions, subtask execution logs, and resumption 
 import os
 import json
 import time
+import asyncio
 import sqlite3
 import contextlib
 import logging
@@ -173,6 +174,46 @@ class TaskStateMachine:
             cursor = conn.execute(f"SELECT task_id FROM tasks WHERE state IN ({placeholders}) ORDER BY created_at ASC", active_states)
             rows = cursor.fetchall()
             return [self.get_task(r["task_id"]) for r in rows if r]
+
+    # ── Live Control Signals ──────────────────────────────────────────────────
+    _pause_events: Dict[str, asyncio.Event] = {}
+    _cancel_flags: Dict[str, bool] = {}
+
+    def is_cancelled(self, task_id: str) -> bool:
+        return self._cancel_flags.get(task_id, False)
+
+    def cancel_task(self, task_id: str):
+        self._cancel_flags[task_id] = True
+        task = self.get_task(task_id)
+        if task:
+            self.transition_state(task, TaskState.CANCELLED, error="Task cancelled by user.")
+        # If task was paused, unblock it so it can terminate cleanly
+        if task_id in self._pause_events:
+            self._pause_events[task_id].set()
+        logger.warning(f"[StateMachine] Task {task_id} marked CANCELLED by user signal.")
+
+    def pause_task(self, task_id: str):
+        task = self.get_task(task_id)
+        if task and task.state in (TaskState.EXECUTING, TaskState.PLANNING):
+            self.transition_state(task, TaskState.PAUSED)
+            event = asyncio.Event()
+            self._pause_events[task_id] = event
+            logger.info(f"[StateMachine] Task {task_id} PAUSED.")
+
+    def resume_task(self, task_id: str):
+        task = self.get_task(task_id)
+        if task and task.state == TaskState.PAUSED:
+            self.transition_state(task, TaskState.EXECUTING)
+            event = self._pause_events.pop(task_id, None)
+            if event:
+                event.set()
+            logger.info(f"[StateMachine] Task {task_id} RESUMED.")
+
+    async def wait_if_paused(self, task_id: str):
+        """Called between subtask executions to block if task is paused."""
+        event = self._pause_events.get(task_id)
+        if event:
+            await event.wait()
 
 
 # Singleton instance
