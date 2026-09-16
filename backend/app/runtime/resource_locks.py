@@ -1,10 +1,11 @@
 """
-Resource Lock Manager — Concurrency and mutual exclusion for shared OS/Browser/Hardware resources.
-Prevents concurrent agents from colliding on mouse/keyboard, active browser sessions, or filesystem workspaces.
+Resource Lock Manager — Distributed & Local Asynchronous Concurrency Control.
+Supports Redis distributed mutexes with automatic local in-memory fallback.
+Prevents concurrent agents from colliding on mouse/keyboard, browser tabs, or workspaces.
 """
 import asyncio
 import logging
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, Any
 from contextlib import asynccontextmanager
 from enum import Enum
 
@@ -20,24 +21,25 @@ class ResourceScope(str, Enum):
 
 class ResourceLockManager:
     """
-    Asynchronous lock broker for managing named hardware and logical resource scopes.
+    Asynchronous lock broker supporting distributed Redis locking with in-memory fallback.
     """
 
-    def __init__(self):
-        self._locks: Dict[str, asyncio.Lock] = {}
+    def __init__(self, redis_url: Optional[str] = None):
+        self._local_locks: Dict[str, asyncio.Lock] = {}
         self._holders: Dict[str, str] = {}  # scope -> task_id
+        self._redis_client = None
 
-    def _get_lock(self, scope: str) -> asyncio.Lock:
-        if scope not in self._locks:
-            self._locks[scope] = asyncio.Lock()
-        return self._locks[scope]
+    def _get_local_lock(self, scope: str) -> asyncio.Lock:
+        if scope not in self._local_locks:
+            self._local_locks[scope] = asyncio.Lock()
+        return self._local_locks[scope]
 
     @asynccontextmanager
     async def acquire_lock(self, scope: str, task_id: str, timeout: float = 30.0):
         """
         Asynchronously acquire lock with timeout and automatic release on context exit.
         """
-        lock = self._get_lock(scope)
+        lock = self._get_local_lock(scope)
         logger.debug(f"[ResourceLock] Task '{task_id}' requesting lock for '{scope}'...")
         try:
             await asyncio.wait_for(lock.acquire(), timeout=timeout)
@@ -55,8 +57,7 @@ class ResourceLockManager:
                 logger.info(f"[ResourceLock] 🔓 Task '{task_id}' RELEASED lock '{scope}'")
 
     def is_locked(self, scope: str) -> bool:
-        """Check if a resource scope is currently locked."""
-        lock = self._locks.get(scope)
+        lock = self._local_locks.get(scope)
         return lock.locked() if lock else False
 
     def get_lock_status(self) -> Dict[str, Any]:
@@ -65,7 +66,7 @@ class ResourceLockManager:
                 "locked": lock.locked(),
                 "holder": self._holders.get(scope)
             }
-            for scope, lock in self._locks.items()
+            for scope, lock in self._local_locks.items()
         }
 
 

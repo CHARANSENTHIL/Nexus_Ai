@@ -1,9 +1,9 @@
 """
-Tiered Memory System — 4-Tier Memory Architecture with TTL Expiration & Consolidation.
+Tiered Memory System — 4-Tier Memory Architecture with TTL Expiration, Memory Governance & Invalidation.
 Tiers:
   1. Working Memory: Active task context and immediate scratchpad.
   2. Episodic Memory: Task execution history, user decisions, and outcomes with TTL expiration.
-  3. Semantic Memory: User preferences, project facts, and domain knowledge.
+  3. Semantic Memory: User preferences, project facts, and domain knowledge with metadata governance (confidence, source, sensitivity).
   4. Procedural Memory: Reusable workflows, site navigation recipes, and action procedures.
 """
 import os
@@ -23,7 +23,7 @@ MEMORY_DB_PATH = MEMORY_DIR / "memory.db"
 
 class TieredMemoryManager:
     """
-    Coordinates multi-tier memory storage, retrieval, consolidation, and TTL expiration.
+    Coordinates multi-tier memory storage, retrieval, consolidation, TTL expiration, and user invalidation ("forget that").
     """
 
     def __init__(self, db_path: Optional[Path] = None):
@@ -56,13 +56,18 @@ class TieredMemoryManager:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_episodic_created ON episodic_memory(created_at)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_episodic_expires ON episodic_memory(expires_at)")
 
-            # 2. Semantic Memory Table (Facts & Preferences)
+            # 2. Semantic Memory Table (Facts & Preferences with Governance Metadata)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS semantic_memory (
                     key TEXT PRIMARY KEY,
                     category TEXT NOT NULL,
                     value_json TEXT NOT NULL,
                     confidence REAL DEFAULT 1.0,
+                    source TEXT DEFAULT 'user_statement',
+                    sensitivity TEXT DEFAULT 'normal',
+                    created_at REAL NOT NULL,
+                    last_used REAL NOT NULL,
+                    expires_at REAL,
                     updated_at REAL NOT NULL
                 )
             """)
@@ -78,6 +83,22 @@ class TieredMemoryManager:
                     updated_at REAL NOT NULL
                 )
             """)
+
+            # Safe column migration for existing tables
+            existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(semantic_memory)").fetchall()}
+            for col, col_def in [
+                ("source", "TEXT DEFAULT 'user_statement'"),
+                ("sensitivity", "TEXT DEFAULT 'normal'"),
+                ("created_at", "REAL DEFAULT 0"),
+                ("last_used", "REAL DEFAULT 0"),
+                ("expires_at", "REAL")
+            ]:
+                if col not in existing_cols:
+                    try:
+                        conn.execute(f"ALTER TABLE semantic_memory ADD COLUMN {col} {col_def}")
+                    except Exception:
+                        pass
+
             conn.commit()
 
     # ── Tier 1: Working Memory ────────────────────────────────────────────────
@@ -94,6 +115,15 @@ class TieredMemoryManager:
     def record_working_observation(self, task_id: str, observation: Dict[str, Any]):
         if task_id in self._working_memory:
             self._working_memory[task_id]["observations"].append(observation)
+
+    def append_step_observation(self, task_id: str, step_title: str = "", tool: str = "", action_input: Optional[Dict[str, Any]] = None, observation: Any = None):
+        self.record_working_observation(task_id, {
+            "title": step_title,
+            "tool": tool,
+            "input": action_input or {},
+            "observation": str(observation)[:300],
+            "timestamp": time.time()
+        })
 
     def get_working_memory(self, task_id: str) -> Dict[str, Any]:
         return self._working_memory.get(task_id, {})
@@ -154,21 +184,39 @@ class TieredMemoryManager:
             conn.commit()
             return cursor.rowcount
 
-    # ── Tier 3: Semantic Memory (User Facts & Preferences) ────────────────────
-    def set_semantic_fact(self, key: str, value: Any, category: str = "preference", confidence: float = 1.0):
+    # ── Tier 3: Semantic Memory (Governed Facts, Preferences & Invalidation) ───
+    def set_semantic_fact(
+        self,
+        key: str,
+        value: Any,
+        category: str = "preference",
+        confidence: float = 1.0,
+        source: str = "explicit_user_statement",
+        sensitivity: str = "normal",
+        ttl_days: Optional[int] = None
+    ):
+        now = time.time()
+        expires = (now + ttl_days * 86400) if ttl_days else None
         with self._get_connection() as conn:
             conn.execute("""
-                INSERT OR REPLACE INTO semantic_memory (key, category, value_json, confidence, updated_at)
-                VALUES (?, ?, ?, ?, ?)
-            """, (key, category, json.dumps(value), confidence, time.time()))
+                INSERT OR REPLACE INTO semantic_memory (
+                    key, category, value_json, confidence, source, sensitivity,
+                    created_at, last_used, expires_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                key, category, json.dumps(value), confidence, source, sensitivity,
+                now, now, expires, now
+            ))
             conn.commit()
-        logger.info(f"[Memory] Saved semantic fact '{key}' [{category}]")
+        logger.info(f"[Memory] Saved governed semantic fact '{key}' [{category}] (source={source}, conf={confidence})")
 
     def get_semantic_fact(self, key: str) -> Optional[Any]:
         with self._get_connection() as conn:
             cursor = conn.execute("SELECT value_json FROM semantic_memory WHERE key = ?", (key,))
             row = cursor.fetchone()
             if row:
+                conn.execute("UPDATE semantic_memory SET last_used = ? WHERE key = ?", (time.time(), key))
+                conn.commit()
                 return json.loads(row["value_json"])
         return None
 
@@ -180,6 +228,21 @@ class TieredMemoryManager:
                 cursor = conn.execute("SELECT key, value_json FROM semantic_memory")
             rows = cursor.fetchall()
             return {r["key"]: json.loads(r["value_json"]) for r in rows}
+
+    def forget_memory(self, query_or_key: str) -> int:
+        """
+        Invalidates and deletes stored memories matching a key or pattern ('Forget that' capability).
+        Returns number of deleted facts.
+        """
+        with self._get_connection() as conn:
+            cur = conn.execute(
+                "DELETE FROM semantic_memory WHERE key = ? OR key LIKE ? OR value_json LIKE ?",
+                (query_or_key, f"%{query_or_key}%", f"%{query_or_key}%")
+            )
+            deleted_count = cur.rowcount
+            conn.commit()
+            logger.info(f"[Memory] 🗑️ User requested forget for '{query_or_key}'. Deleted {deleted_count} semantic entries.")
+            return deleted_count
 
     # ── Tier 4: Procedural Memory (Learned Workflows & Recipes) ────────────────
     def store_procedure(self, domain_or_app: str, trigger_pattern: str, steps: List[Dict[str, Any]]):
@@ -211,18 +274,7 @@ class TieredMemoryManager:
                     }
         return None
 
-    def append_step_observation(self, task_id: str, step_title: str = "", tool: str = "", action_input: Optional[Dict[str, Any]] = None, observation: Any = None):
-        """Append observation step to working memory."""
-        self.record_working_observation(task_id, {
-            "title": step_title,
-            "tool": tool,
-            "input": action_input or {},
-            "observation": str(observation)[:300],
-            "timestamp": time.time()
-        })
-
     def retrieve_relevant_context(self, user_id: str = "default", query: str = "") -> Dict[str, Any]:
-        """Retrieve semantic facts and procedural recipes matching context."""
         facts = self.list_semantic_facts()
         proc = self.find_procedure(query) if query else None
         return {
@@ -233,7 +285,6 @@ class TieredMemoryManager:
 
     # ── Consolidation Hook ────────────────────────────────────────────────────
     def consolidate_task_memory(self, task_id: str, goal: str = "", outcome: str = "", subtasks: Optional[List[Any]] = None, success: bool = True):
-        """Consolidates working memory into episodic & semantic memory upon task completion."""
         wm = self.get_working_memory(task_id)
         effective_goal = goal or wm.get("goal", f"Task {task_id}")
         effective_outcome = outcome or ("Success" if success else "Failed")
@@ -248,7 +299,6 @@ class TieredMemoryManager:
         elif wm.get("observations"):
             actions = wm["observations"]
 
-        # Store in Episodic memory
         self.store_episode(
             task_id=task_id,
             goal=effective_goal,
@@ -258,7 +308,6 @@ class TieredMemoryManager:
             ttl_days=30,
         )
 
-        # Clear working memory
         self.clear_working_memory(task_id)
         return True
 

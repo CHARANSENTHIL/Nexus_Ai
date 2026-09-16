@@ -78,6 +78,13 @@ class TaskStateMachine:
         logger.info(f"[StateMachine] Created durable task {task.task_id} for user {user_id}: '{goal[:50]}'")
         return task
 
+    def attach_plan(self, task: TaskRecord, subtasks: List[SubtaskNode]):
+        """Attach planned subtasks to task record and persist to SQLite."""
+        task.subtasks = subtasks
+        task.total_steps = len(subtasks)
+        self.save_task(task)
+        logger.info(f"[StateMachine] Attached plan ({len(subtasks)} steps) to task {task.task_id}")
+
     def save_task(self, task: TaskRecord):
         """Persist or update task record atomically."""
         task.updated_at = time.time()
