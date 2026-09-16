@@ -154,6 +154,7 @@ app.add_middleware(
 from app.api import vision_api
 from app.api import n8n_integration
 from app.api import voice_api
+from app.api import observability
 
 # Routers
 app.include_router(digital_twin.router, prefix=settings.API_V1_STR, tags=["Digital Twin"])
@@ -163,6 +164,7 @@ app.include_router(vision_api.router, prefix=settings.API_V1_STR, tags=["Vision"
 app.include_router(events_api.router, prefix=settings.API_V1_STR, tags=["Events & Timeline"])
 app.include_router(n8n_integration.router, prefix=f"{settings.API_V1_STR}/n8n", tags=["n8n Automation"])
 app.include_router(voice_api.router, prefix=f"{settings.API_V1_STR}/voice", tags=["Voice & Audio"])
+app.include_router(observability.router, tags=["Runtime Observability"])
 
 
 

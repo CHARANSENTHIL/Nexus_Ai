@@ -76,6 +76,35 @@ class RecoveryEngine:
 
         return False, "Unrecognized error pattern. Escalating to human handoff.", None
 
+    async def handle_failure(
+        self,
+        task: Any,
+        failed_subtask: Any,
+        error_message: str
+    ) -> Dict[str, Any]:
+        """
+        Asynchronous failure handler formulating recovery decision and input adjustments.
+        """
+        tool_name = getattr(failed_subtask, "tool_name", "")
+        attempt = getattr(failed_subtask, "retry_count", 1)
+        max_retries = getattr(failed_subtask, "max_retries", 3)
+
+        category = self.classify_error(error_message, tool_name)
+        can_recover, strategy_desc, plan = self.determine_recovery(
+            category=category,
+            attempt=attempt,
+            max_retries=max_retries,
+            details={"error": error_message, "tool_name": tool_name}
+        )
+
+        return {
+            "can_recover": can_recover,
+            "category": category,
+            "strategy": "modify_input" if can_recover else "escalate_handoff",
+            "strategy_description": strategy_desc,
+            "adjusted_input": plan or {}
+        }
+
 
 # Singleton instance
 recovery_engine = RecoveryEngine()

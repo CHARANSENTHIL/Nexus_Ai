@@ -1,117 +1,62 @@
-version: '3.9'
+version: '3.8'
 
 services:
-  # ── FastAPI Backend ──────────────────────────────────────────
-  backend:
-    build: ./backend
-    container_name: nexus_backend
+  nexus-gateway:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: nexus-gateway
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://nexus:nexuspassword@postgres:5432/nexusai
-      - SYNC_DATABASE_URL=postgresql://nexus:nexuspassword@postgres:5432/nexusai
-      - REDIS_URL=redis://redis:6379/0
-      - CHROMADB_HOST=chromadb
-      - CHROMADB_PORT=8000
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_ALLOWED_USER_IDS=${TELEGRAM_ALLOWED_USER_IDS}
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
-    env_file:
-      - .env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      chromadb:
-        condition: service_started
+      - REDIS_HOST=nexus-redis
+      - REDIS_PORT=6379
     volumes:
-      - ./backend:/app
-    restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # ── Next.js Frontend ─────────────────────────────────────────
-  frontend:
-    build: ./frontend
-    container_name: nexus_frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - ./backend:/app/backend
+      - ~/.nexus_ai:/root/.nexus_ai
     depends_on:
-      - backend
-    restart: unless-stopped
+      - nexus-redis
+    networks:
+      - nexus-network
 
-  # ── PostgreSQL ───────────────────────────────────────────────
-  postgres:
-    image: postgres:16-alpine
-    container_name: nexus_postgres
+  nexus-worker-browser:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: nexus-worker-browser
+    restart: unless-stopped
+    command: python backend/run_bot.py
     environment:
-      POSTGRES_USER: nexus
-      POSTGRES_PASSWORD: nexuspassword
-      POSTGRES_DB: nexusai
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - REDIS_HOST=nexus-redis
+      - REDIS_PORT=6379
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nexus -d nexusai"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - ./backend:/app/backend
+      - ~/.nexus_ai:/root/.nexus_ai
+    depends_on:
+      - nexus-redis
+    networks:
+      - nexus-network
 
-  # ── Redis ────────────────────────────────────────────────────
-  redis:
+  nexus-redis:
     image: redis:7-alpine
-    container_name: nexus_redis
+    container_name: nexus-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ── ChromaDB ─────────────────────────────────────────────────
-  chromadb:
-    image: chromadb/chroma:latest
-    container_name: nexus_chromadb
-    ports:
-      - "8001:8000"
-    volumes:
-      - chroma_data:/chroma/chroma
-    restart: unless-stopped
-
-  # ── n8n ──────────────────────────────────────────────────────
-  n8n:
-    image: n8nio/n8n:latest
-    container_name: nexus_n8n
-    ports:
-      - "5678:5678"
-    environment:
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=admin
-      - N8N_BASIC_AUTH_PASSWORD=nexusn8n
-      - WEBHOOK_URL=http://localhost:5678/
-      - GENERIC_TIMEZONE=Asia/Kolkata
-    volumes:
-      - n8n_data:/home/node/.n8n
-      - ./n8n/workflows:/home/node/.n8n/workflows
-    restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - redis-data:/data
+    networks:
+      - nexus-network
 
 volumes:
-  postgres_data:
-  redis_data:
-  chroma_data:
-  n8n_data:
+  redis-data:
 
+networks:
+  nexus-network:
+    driver: bridge

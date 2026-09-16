@@ -1,0 +1,33 @@
+{
+  "timestamp": 1789574267.2055392,
+  "hardware": {
+    "ram_total_gb": 15.69,
+    "ram_available_gb": 3.9,
+    "ram_percent_used": 75.1,
+    "cpu_percent": 16.8,
+    "low_memory_mode": false
+  },
+  "results": [
+    {
+      "task_type": "fast_path",
+      "prompt": "Check if port 8000 is open",
+      "routed_model": "llama3:latest",
+      "routing_latency_ms": 0.001,
+      "status": "OPTIMAL"
+    },
+    {
+      "task_type": "coding",
+      "prompt": "Write a Python AST parser for class definitions",
+      "routed_model": "llama3:latest",
+      "routing_latency_ms": 0.001,
+      "status": "OPTIMAL"
+    },
+    {
+      "task_type": "reasoning",
+      "prompt": "Plan a multi-step web scraping and PDF extraction pipeline",
+      "routed_model": "llama3:latest",
+      "routing_latency_ms": 0.001,
+      "status": "OPTIMAL"
+    }
+  ]
+}
