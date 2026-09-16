@@ -1,13 +1,14 @@
 """
-Observation Verifier — Deterministic verification after every tool action.
+Observation Verifier — Deep Deterministic & Semantic verification after every tool action.
 Implements the Action -> Observation -> Verification loop (preventing 'assume success' errors).
 """
 import os
 import ast
 import psutil
 import logging
+import asyncio
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 from app.runtime.task_models import VerificationResult
 
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class ObservationVerifier:
     """
-    Executes domain-specific deterministic verification checks following action execution.
+    Executes domain-specific deterministic and multi-stage semantic verification checks following action execution.
     """
 
     async def verify(
@@ -41,8 +42,14 @@ class ObservationVerifier:
             return self._verify_process_running(tool_input, raw_result)
         elif strat == "code_syntax":
             return self._verify_code_syntax(tool_input, raw_result)
+        elif strat == "code_semantic":
+            return self._verify_code_semantic(tool_input, raw_result)
         elif strat == "browser_navigated":
             return await self._verify_browser_navigated(tool_input, raw_result)
+        elif strat == "browser_dom_semantic":
+            return await self._verify_browser_dom_semantic(tool_input, raw_result)
+        elif strat == "endpoint_health":
+            return await self._verify_endpoint_health(tool_input, raw_result)
         else:
             return self._verify_general_success(raw_result)
 
@@ -63,7 +70,6 @@ class ObservationVerifier:
         return "general"
 
     def _verify_file_exists(self, tool_input: Dict[str, Any], raw_result: Any) -> VerificationResult:
-        # Extract target path
         target_path = None
         for k in ("destination", "path", "file_path", "filename", "output_path", "target_file"):
             if k in tool_input and tool_input[k]:
@@ -97,7 +103,6 @@ class ObservationVerifier:
                 details=f"Target file missing or 0 bytes: '{target_path}'"
             )
 
-        # Fallback to general check if no path found
         return self._verify_general_success(raw_result)
 
     def _verify_file_deleted(self, tool_input: Dict[str, Any], raw_result: Any) -> VerificationResult:
@@ -166,6 +171,38 @@ class ObservationVerifier:
                 )
         return self._verify_general_success(raw_result)
 
+    def _verify_code_semantic(self, tool_input: Dict[str, Any], raw_result: Any) -> VerificationResult:
+        """Deep semantic check for Python AST: checks for required symbols/classes/functions."""
+        target_file = tool_input.get("file_path") or tool_input.get("target_file")
+        expected_symbols = tool_input.get("expected_symbols", [])
+        if target_file and Path(target_file).exists():
+            try:
+                tree = ast.parse(Path(target_file).read_text(encoding="utf-8"))
+                found_symbols = {
+                    node.name for node in ast.walk(tree)
+                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                }
+                missing = [s for s in expected_symbols if s not in found_symbols]
+                if missing:
+                    return VerificationResult(
+                        passed=False,
+                        strategy_used="code_semantic",
+                        details=f"Missing expected AST symbols: {missing}"
+                    )
+                return VerificationResult(
+                    passed=True,
+                    strategy_used="code_semantic",
+                    details=f"AST verified with {len(found_symbols)} defined symbols.",
+                    metrics={"symbols_count": len(found_symbols)}
+                )
+            except Exception as e:
+                return VerificationResult(
+                    passed=False,
+                    strategy_used="code_semantic",
+                    details=f"AST parsing failed: {e}"
+                )
+        return self._verify_code_syntax(tool_input, raw_result)
+
     async def _verify_browser_navigated(self, tool_input: Dict[str, Any], raw_result: Any) -> VerificationResult:
         from app.browser.playwright_manager import playwright_manager
         current_url = playwright_manager._current_url
@@ -176,6 +213,72 @@ class ObservationVerifier:
                 details=f"Browser connected to active URL: {current_url}"
             )
         return self._verify_general_success(raw_result)
+
+    async def _verify_browser_dom_semantic(self, tool_input: Dict[str, Any], raw_result: Any) -> VerificationResult:
+        """Semantic verification of DOM state, element presence, and inner text."""
+        from app.browser.playwright_manager import playwright_manager
+        selector = tool_input.get("expected_selector")
+        text_match = tool_input.get("expected_text")
+        page = playwright_manager._page
+
+        if not page:
+            return self._verify_general_success(raw_result)
+
+        try:
+            if selector:
+                elem = await page.query_selector(selector)
+                if not elem:
+                    return VerificationResult(
+                        passed=False,
+                        strategy_used="browser_dom_semantic",
+                        details=f"Expected DOM element '{selector}' not found on page."
+                    )
+            if text_match:
+                content = await page.content()
+                if text_match.lower() not in content.lower():
+                    return VerificationResult(
+                        passed=False,
+                        strategy_used="browser_dom_semantic",
+                        details=f"Expected text '{text_match}' not found in DOM."
+                    )
+            return VerificationResult(
+                passed=True,
+                strategy_used="browser_dom_semantic",
+                details="DOM semantic condition verified."
+            )
+        except Exception as e:
+            return VerificationResult(
+                passed=False,
+                strategy_used="browser_dom_semantic",
+                details=f"DOM verification error: {e}"
+            )
+
+    async def _verify_endpoint_health(self, tool_input: Dict[str, Any], raw_result: Any) -> VerificationResult:
+        """Verify local HTTP service health endpoint."""
+        import urllib.request
+        port = tool_input.get("port", 8000)
+        path = tool_input.get("path", "/health")
+        url = f"http://127.0.0.1:{port}{path}"
+        try:
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
+                if resp.status in (200, 204):
+                    return VerificationResult(
+                        passed=True,
+                        strategy_used="endpoint_health",
+                        details=f"HTTP endpoint '{url}' returned status {resp.status}"
+                    )
+                return VerificationResult(
+                    passed=False,
+                    strategy_used="endpoint_health",
+                    details=f"HTTP endpoint '{url}' returned non-200 status: {resp.status}"
+                )
+        except Exception as e:
+            return VerificationResult(
+                passed=False,
+                strategy_used="endpoint_health",
+                details=f"Failed connecting to '{url}': {e}"
+            )
 
     def _verify_general_success(self, raw_result: Any) -> VerificationResult:
         if isinstance(raw_result, dict):

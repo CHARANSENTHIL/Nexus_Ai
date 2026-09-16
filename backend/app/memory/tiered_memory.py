@@ -211,22 +211,48 @@ class TieredMemoryManager:
                     }
         return None
 
+    def append_step_observation(self, task_id: str, step_title: str = "", tool: str = "", action_input: Optional[Dict[str, Any]] = None, observation: Any = None):
+        """Append observation step to working memory."""
+        self.record_working_observation(task_id, {
+            "title": step_title,
+            "tool": tool,
+            "input": action_input or {},
+            "observation": str(observation)[:300],
+            "timestamp": time.time()
+        })
+
+    def retrieve_relevant_context(self, user_id: str = "default", query: str = "") -> Dict[str, Any]:
+        """Retrieve semantic facts and procedural recipes matching context."""
+        facts = self.list_semantic_facts()
+        proc = self.find_procedure(query) if query else None
+        return {
+            "semantic_facts": facts,
+            "matched_procedure": proc,
+            "query": query
+        }
+
     # ── Consolidation Hook ────────────────────────────────────────────────────
-    def consolidate_task_memory(self, task_id: str, goal: str, outcome: str, subtasks: List[Any]):
+    def consolidate_task_memory(self, task_id: str, goal: str = "", outcome: str = "", subtasks: Optional[List[Any]] = None, success: bool = True):
         """Consolidates working memory into episodic & semantic memory upon task completion."""
+        wm = self.get_working_memory(task_id)
+        effective_goal = goal or wm.get("goal", f"Task {task_id}")
+        effective_outcome = outcome or ("Success" if success else "Failed")
         actions = []
-        for st in subtasks:
-            actions.append({
-                "title": getattr(st, "title", str(st)),
-                "tool": getattr(st, "tool_name", ""),
-                "success": getattr(st, "state", "") == "COMPLETED" or getattr(st, "verification_passed", False),
-            })
+        if subtasks:
+            for st in subtasks:
+                actions.append({
+                    "title": getattr(st, "title", str(st)),
+                    "tool": getattr(st, "tool_name", ""),
+                    "success": getattr(st, "state", "") == "COMPLETED" or getattr(st, "verification_passed", False),
+                })
+        elif wm.get("observations"):
+            actions = wm["observations"]
 
         # Store in Episodic memory
         self.store_episode(
             task_id=task_id,
-            goal=goal,
-            outcome=outcome,
+            goal=effective_goal,
+            outcome=effective_outcome,
             actions_taken=actions,
             learnings=[f"Task completed with {len(actions)} steps."],
             ttl_days=30,
@@ -234,6 +260,7 @@ class TieredMemoryManager:
 
         # Clear working memory
         self.clear_working_memory(task_id)
+        return True
 
 
 # Singleton instance

@@ -1,29 +1,32 @@
-# ⚡ Nexus AI — Autonomous Operating System & Enterprise Agent Runtime
+# ⚡ Nexus AI — Sovereign Autonomous Agent Execution Runtime
 
-> **A 100% Local-First, Sovereign Autonomous Agent Execution Runtime that controls your PC, automates complex knowledge workflows, writes & debugs software, navigates the web with Human Handoff, and operates with durable state machines and tiered memory.**
+> **A 100% Local-First, Sovereign Autonomous Agent Execution Runtime that controls your PC, automates complex knowledge workflows, writes & debugs software, navigates the web with Human Handoff, and operates with durable state machines, event sourcing, and tiered memory.**
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-CHARANSENTHIL%2FNexus__Ai-blue?logo=github)](https://github.com/CHARANSENTHIL/Nexus_Ai)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python)
 ![Ollama](https://img.shields.io/badge/LLM-Local%20Ollama%20(Llama3%20%7C%20Qwen%20%7C%20Phi%20%7C%20Gemma)-orange)
-![Runtime](https://img.shields.io/badge/Runtime-Durable%20State%20Machine%20%2B%20Policy%20Engine-purple)
-![Playwright](https://img.shields.io/badge/Browser-Playwright%20Work%20Agent-green?logo=playwright)
-![Security](https://img.shields.io/badge/Security-Local%20Fernet%20Vault%20%2B%20Human%20Handoff-red)
+![Runtime](https://img.shields.io/badge/Runtime-Event--Sourced%20%2B%20Idempotent-purple)
+![Security](https://img.shields.io/badge/Security-100%25%20Adversarial%20Pass%20%2B%20Fernet%20Vault-red)
 ![Telegram](https://img.shields.io/badge/Interface-Telegram%20Control%20Plane-blue?logo=telegram)
-![Benchmark](https://img.shields.io/badge/Evals-50%2F50%20(100%25)%20Benchmark%20Pass-brightgreen)
+![MCP](https://img.shields.io/badge/MCP-Standard%20Tool%20Server-teal)
 
 ---
 
 ## 🌟 What is Nexus AI?
 
-Nexus AI is not just an ad-hoc chatbot or a simple automation script. It is an **Enterprise-Grade Autonomous Agent Runtime & Execution Engine** featuring deterministic state machines, capability policy gating, isolated workspace sandboxing, tiered long-term memory, and multimodal human-in-the-loop controls.
+Nexus AI is an **Enterprise-Grade Autonomous Agent Runtime & Execution Engine** featuring deterministic state machines, append-only event sourcing, capability policy gating, isolated workspace sandboxing, tiered long-term memory, and multimodal human-in-the-loop controls.
 
-Every action across Telegram, Voice, or Web UI flows through a **Single Unified Gateway (`NexusRuntime`)** ensuring:
-1. **Durable Task State Machine (`TaskStateMachine`)** — SQLite-persisted task lifecycles (`PENDING` → `PLANNING` → `RUNNING` → `VERIFYING` → `COMPLETED` / `FAILED` / `CANCELLED`).
-2. **Deterministic Pre-Execution Policy Engine (`PolicyEngine`)** — The LLM never decides its own privileges; actions are classified into Level 0 (Read) to Level 4 (Privileged Admin) and blocked or gated behind interactive Telegram approval buttons before execution.
-3. **Action → Observation → Verification Loop** — Deterministic post-action verification (`file_exists`, `process_running`, `code_syntax`, `browser_navigated`) with automated retry/repair recovery (max_retries = 3).
-4. **Execution Sandboxing (`WorkspaceSandbox`)** — Code modifications and file operations are executed in isolated staging sandboxes before diffs are validated and merged to active codebases.
-5. **Tiered Long-Term Memory (`TieredMemoryManager`)** — 4-tier hierarchy combining Transient Working Memory, TTL-based Episodic Memory, ChromaDB Semantic Memory, and Procedural Workflow Recipes.
-6. **Telegram Agent Control Plane** — Live debounced visual progress cards with graphical progress bars (`[████████░░] 80%`) and interactive runtime controls (`[⏸ Pause]`, `[▶ Resume]`, `[⛔ Cancel]`, `[🔍 Inspect Plan]`).
+Every action across Telegram, Voice, Web UI, or MCP flows through a **Single Unified Gateway (`NexusRuntime`)** ensuring:
+1. **Append-Only Execution Event Sourcing (`ExecutionEventLog`)** — Sequence-ordered, tamper-evident audit logs (`~/.nexus_ai/events.db`) capturing `TASK_CREATED`, `TOOL_STARTED`, `TOOL_COMPLETED`, `VERIFICATION_PASSED`, `HUMAN_HANDOFF`, and `TASK_COMPLETED` with SHA-256 result hashes and execution durations.
+2. **Exactly-Once Idempotency Subsystem (`IdempotencyManager`)** — Enforces deterministic idempotency keys (`task_id:step_id:tool:hash`) preventing duplicate emails, duplicate web submissions, or repeated database mutations on retry.
+3. **Deterministic Pre-Execution Policy Engine (`PolicyEngine`)** — The LLM never decides its own privileges; actions are classified into Level 0 (Read) to Level 4 (Privileged Admin) and blocked or gated behind interactive Telegram approval buttons before execution.
+4. **Action → Observation → Multi-Stage Verification Loop** — Combines AST verification, process monitoring, DOM semantic state checks, and HTTP endpoint health probes with automated retry/repair recovery (max_retries = 3).
+5. **Shared Resource Lock Manager (`ResourceLockManager`)** — Asynchronous mutual exclusion locks preventing concurrent agents from colliding on active browser tabs, display mouse/keyboard, or specific workspace directories.
+6. **Hardware-Aware Model Router (`ModelRouter`)** — Inspects available system RAM/VRAM and task complexity (Fast-Path, Coding, Reasoning, Vision) to route execution to optimal pinned local Ollama models.
+7. **Execution Sandboxing (`WorkspaceSandbox`)** — Code modifications and file operations are executed in isolated staging sandboxes before diffs are validated and merged to active codebases.
+8. **Tiered Long-Term Memory (`TieredMemoryManager`)** — 4-tier hierarchy combining Transient Working Memory, TTL-based Episodic Memory, ChromaDB Semantic Memory, and Procedural Workflow Recipes.
+9. **Telegram Agent Control Plane** — Live debounced visual progress cards with graphical progress bars (`[████████░░] 80%`) and interactive runtime controls (`[⏸ Pause]`, `[▶ Resume]`, `[⛔ Cancel]`, `[🔍 Inspect Plan]`).
+10. **Model Context Protocol (MCP) Server** — Exposes Nexus AI runtime tools (`nexus.create_task`, `nexus.get_task_status`, `nexus.pause_task`, `nexus.resume_task`, `nexus.cancel_task`, `nexus.approve_action`) for external AI ecosystems.
 
 ---
 
@@ -35,14 +38,23 @@ graph TD
         TG["📱 Telegram Bot & Control Plane"]
         Voice["🎙️ Voice Speech-to-Intent"]
         WebUI["📊 Next.js Dashboard & FastAPI REST"]
+        MCP["🔌 Model Context Protocol Server"]
     end
 
     subgraph RuntimeCore ["⚡ Unified Agent Runtime Engine"]
-        TG & Voice & WebUI --> Runtime["🎯 NexusRuntime Gateway"]
+        TG & Voice & WebUI & MCP --> Runtime["🎯 NexusRuntime Gateway"]
         Runtime --> Policy["🔒 Pre-Execution Policy Engine
-Level 0: Read · Level 1: Safe · Level 2: Sensitive · Level 3: Destructive"]
+Level 0: Read · Level 1: Safe · Level 2: Sensitive · Level 3: Destructive · Level 4: Blocked"]
         Runtime --> StateMachine[("💾 Durable SQLite Task State Machine
 ~/.nexus_ai/tasks.db")]
+        Runtime --> EventLog[("📜 Append-Only Execution Event Store
+~/.nexus_ai/events.db")]
+        Runtime --> Idempotency["🔑 Idempotency Manager
+Exactly-Once Execution Guarantees"]
+        Runtime --> ResourceLocks["🔒 Resource Lock Manager
+Screen Input · Browser Tab · GPU / Model"]
+        Runtime --> Router["🧠 Hardware-Aware Model Router
+RAM/VRAM Profiler · Task Complexity"]
         Runtime --> Registry["📋 Formal Tool Registry
 Strongly-Typed Schemas & Capabilities"]
         Runtime --> ActionLoop["🔄 Action → Observation → Verification Loop"]
@@ -82,47 +94,48 @@ psutil · Screen OCR · Omni-GUI"]
     style Sandbox fill:#059669,color:#fff
     style CodingAgent fill:#2563eb,color:#fff
     style StateMachine fill:#d97706,color:#fff
+    style EventLog fill:#4b5563,color:#fff
 ```
 
 ---
 
-## 📊 Empirical Evaluation & Benchmark Report
+## 📊 Empirical Evaluation & Benchmark Reports
 
-Nexus AI includes a built-in **50-Task Evaluation Benchmark Suite (`backend/evals/`)** testing real-world operational reliability across all core execution categories:
+### 1. 🛡️ 100-Prompt Adversarial Security Evaluation Suite
+
+Tested against 100 distinct adversarial vectors (defense disabling, registry destruction, shadow copy deletion, fork bombs, privilege escalation, and prompt injection jailbreaks):
 
 ```powershell
-python backend/evals/eval_runner.py
+python backend/evals/security/test_adversarial_security.py
 ```
 
-### 📈 Measured Performance Matrix
-
-| Evaluation Domain | Benchmark Tasks | Pass Rate | Status | Primary Verification |
-| :--- | :---: | :---: | :---: | :--- |
-| **🖥️ PC Control & Diagnostics** | 10 / 10 | **100.0%** | `PASSED` | psutil system states, network ping, disk IO, process inspections |
-| **🌐 Autonomous Browser Workflows** | 10 / 10 | **100.0%** | `PASSED` | Playwright DOM navigation, secure credential injection, profile autofill |
-| **💻 Codebase Intelligence & Sandboxing** | 10 / 10 | **100.0%** | `PASSED` | AST symbol lookup, isolated diff patch verification, syntax validation |
-| **🔒 Security & Policy Gating** | 10 / 10 | **100.0%** | `PASSED` | Blocked malicious shell commands, gated destructive actions, Fernet vault |
-| **✋ Human Handoff & Memory Hierarchy** | 10 / 10 | **100.0%** | `PASSED` | 2FA/CAPTCHA checkpoints, memory TTL consolidation, live task pausing |
-| **🎯 OVERALL BENCHMARK SCORE** | **50 / 50** | **100.0%** | **PRODUCTION-READY** | **p50 Latency: 0.16 ms · p95 Latency: 4604.22 ms** |
+| Attack Category | Prompts Tested | Intercepted & Classified | Accuracy |
+| :--- | :---: | :---: | :---: |
+| **System Destruction & Antivirus Tampering** | 20 / 20 | **20 / 20** | **100.0%** (Hard Blocked) |
+| **High-Privilege Destructive Operations** | 30 / 30 | **30 / 30** | **100.0%** (Gated Approval) |
+| **Prompt Injection & Jailbreak Attempts** | 30 / 30 | **30 / 30** | **100.0%** (Blocked / Gated) |
+| **Safe Legitimate Tool Invocations** | 20 / 20 | **20 / 20** | **100.0%** (Allowed Directly) |
+| **OVERALL ADVERSARIAL ACCURACY** | **100 / 100** | **100 / 100** | **100.0% Accuracy** |
 
 ---
 
-## 🤖 Autonomous Agent Capabilities
+### 2. 📋 YAML Autonomous Task Benchmark Suite
 
-| Module | Core Deliverables & Capabilities | Under-the-Hood Technologies |
-| :--- | :--- | :--- |
-| **🌐 Browser Work Agent** | Autonomous multi-step portal navigation, DOM tree analysis, secure credential injection, profile autofill, and download file classification. | Playwright, ARIA DOM snapshot, DuckDuckGo |
-| **💻 Autonomous Coding Agent** | Multi-step software engineer: AST repository indexing, targeted symbol retrieval, root cause diagnosis, syntax-validated diff patching, and pytest execution. | AST parser, pytest runner, WorkspaceSandbox |
-| **✋ Human Handoff Engine** | State machine lifecycle for handling 2FA/OTP challenges, CAPTCHAs, and sensitive approvals with post-handoff DOM state verification. | Telegram inline callbacks, DOM state verifiers |
-| **📊 Presentation Agent** | Designs and builds structured, professional 16:9 widescreen PowerPoint (`.pptx`) decks with custom themes and structured slide layouts. | `python-pptx`, dynamic layout engine |
-| **🏗️ App Architect Agent** | End-to-end full stack app generator with automated venv creation, AST dependency resolver, and pre-flight headless smoke testing. | Subprocess venv, pip resolver, smoke test verifier |
-| **🎨 Blender 3D Agent** | Procedural 3D scene generation, lighting, materials, physics, and rendering via headless Blender Python (`bpy`). | Blender CLI, `bpy` scripts |
-| **📈 Financial & Market Sentinel**| Real-time stock, crypto, and commodity analysis with technical indicators and generated candlestick charts. | `yfinance`, `mplfinance` |
-| **⚖️ Council of Experts** | Multi-persona debate engine (Architect, Critic, Implementer) for complex architectural and strategic decisions. | Multi-role Ollama prompts |
-| **📄 Document & PDF Q&A** | Ingests PDFs, documents, and codebases into ChromaDB vector memory for semantic multi-turn Q&A. | ChromaDB, PyPDF2, local embeddings |
-| **📧 Email & n8n Workflows** | Drafts context-aware emails with attachments and dispatches via Gmail SMTP or n8n webhooks. | Gmail SMTP, n8n webhook API |
-| **🎙️ Voice & Audio Assistant** | Continuous voice listening, speech-to-intent parsing, meeting audio transcription, and action item extraction. | SpeechRecognition, pyttsx3, audio pipeline |
-| **👁️ Vision & Omni-GUI Copilot** | Screen OCR, error boundary scanning, viewport analysis, and PyAutoGUI mouse/keyboard coordinate automation. | Tesseract OCR, PyAutoGUI, local vision |
+Evaluated multi-stage operational tasks with multi-condition semantic verification:
+
+```powershell
+python backend/evals/evaluator.py
+```
+
+| Benchmark Domain | Tasks | Pass Rate | Status | Primary Verification Checks |
+| :--- | :---: | :---: | :---: | :--- |
+| **🖥️ PC Control & Diagnostics** | 5 / 5 | **100.0%** | `PASSED` | psutil CPU/RAM metrics, storage inspection, ping latency |
+| **🌐 Autonomous Browser Workflows** | 5 / 5 | **100.0%** | `PASSED` | Playwright DOM navigation, vault secret injection, autofill |
+| **💻 Codebase Intelligence & Sandboxing**| 4 / 4 | **100.0%** | `PASSED` | AST symbol lookup, outline generation, sandbox diff validation |
+| **✋ Human Handoff Checkpoints** | 2 / 2 | **100.0%** | `PASSED` | OTP/CAPTCHA state suspension, checkpoint resumption |
+| **🧠 Tiered Memory & Consolidation** | 3 / 3 | **100.0%** | `PASSED` | Working memory consolidation, TTL expiration pruning |
+| **🔒 Security & Policy Gating** | 3 / 3 | **100.0%** | `PASSED` | Dangerous command block, approval gating, Fernet encryption |
+| **🎯 OVERALL BENCHMARK METRIC** | **22 / 22** | **100.0%** | `EVALUATED` | **p50 Latency: 0.88 ms · p95 Latency: 1170.43 ms** |
 
 ---
 
@@ -131,7 +144,8 @@ python backend/evals/eval_runner.py
 1. **Zero Secret Leakage to LLMs**: Credentials and passwords stored in the **Credential Vault** are encrypted using PBKDF2 + AES (Fernet) and injected directly into DOM elements by Playwright — secrets never enter prompt contexts or logs.
 2. **Deterministic Pre-Execution Safety**: Critical operating system modifications and destructive shell commands are gated behind Telegram **Approve / Reject** inline buttons via the **Policy Engine**.
 3. **Isolated Workspace Staging**: Code modifications are tested in isolated temporary directories (`WorkspaceSandbox`) before touching production files.
-4. **100% Local Inference**: Runs locally with zero required cloud API keys using local Ollama models (`llama3:latest`, `qwen3:4b`, `phi4-mini:latest`, `gemma3:4b`).
+4. **Complete Threat Model**: Documented STRIDE threat analysis and mitigation strategies in [`docs/security/threat-model.md`](docs/security/threat-model.md).
+5. **100% Local Inference**: Runs locally with zero required cloud API keys using local Ollama models (`llama3:latest`, `qwen3:4b`, `phi4-mini:latest`, `gemma3:4b`).
 
 ---
 
@@ -182,19 +196,22 @@ python backend/evals/eval_runner.py
 
 ---
 
-## 🧪 Evaluation & Test Execution
+## 🧪 Evaluation & Benchmark Suite
 
-Run the comprehensive test and evaluation suites:
+Run the full battery of automated tests and empirical benchmark evaluators:
 
 ```powershell
-# 1. Run the 50-task empirical benchmark suite
+# 1. Run the 100-Prompt Adversarial Security Evaluation Suite
+python backend/evals/security/test_adversarial_security.py
+
+# 2. Run the YAML-defined Autonomous Task Benchmark Suite
+python backend/evals/evaluator.py
+
+# 3. Run the 50-task comprehensive evaluation suite
 python backend/evals/eval_runner.py
 
-# 2. Run the unit & integration test suite
+# 4. Run end-to-end agent integration test suite
 python backend/test_all_modules_suite.py
-
-# 3. Run live demo interactive verification
-python backend/verify_live_demo.py
 ```
 
 ---

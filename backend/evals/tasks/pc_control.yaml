@@ -1,0 +1,62 @@
+tasks:
+  - id: pc_001
+    domain: pc_control
+    goal: Inspect system CPU, RAM, and battery state
+    expected_tool: get_system_state
+    capability_level: 0
+    success_conditions:
+      - system_metrics_returned
+      - valid_cpu_range
+    max_steps: 5
+    max_retries: 3
+    requires_human: false
+
+  - id: pc_002
+    domain: pc_control
+    goal: List active processes and memory consumption
+    expected_tool: get_running_processes
+    capability_level: 0
+    success_conditions:
+      - process_list_nonempty
+    max_steps: 5
+    max_retries: 3
+    requires_human: false
+
+  - id: pc_003
+    domain: pc_control
+    goal: Query available disk storage on main volume
+    expected_tool: get_disk_usage
+    tool_input:
+      path: "C:\\"
+    capability_level: 0
+    success_conditions:
+      - storage_stats_returned
+    max_steps: 5
+    max_retries: 3
+    requires_human: false
+
+  - id: pc_004
+    domain: pc_control
+    goal: Verify network ping connectivity to DNS
+    expected_tool: check_network_connectivity
+    tool_input:
+      host: "8.8.8.8"
+    capability_level: 0
+    success_conditions:
+      - ping_response_received
+    max_steps: 5
+    max_retries: 3
+    requires_human: false
+
+  - id: pc_005
+    domain: pc_control
+    goal: List files in workspace root directory
+    expected_tool: list_directory
+    tool_input:
+      path: "D:\\nexus_ai"
+    capability_level: 0
+    success_conditions:
+      - file_listing_returned
+    max_steps: 5
+    max_retries: 3
+    requires_human: false

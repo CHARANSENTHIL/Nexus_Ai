@@ -1,0 +1,35 @@
+tasks:
+  - id: memory_001
+    domain: memory
+    goal: Store working memory observations and consolidate on completion
+    expected_tool: consolidate_task_memory
+    capability_level: 0
+    success_conditions:
+      - working_memory_cleared
+      - episodic_record_saved
+    max_steps: 5
+    max_retries: 3
+    requires_human: false
+
+  - id: memory_002
+    domain: memory
+    goal: Prune expired episodic memories using TTL policy
+    expected_tool: prune_expired_memories
+    capability_level: 1
+    success_conditions:
+      - ttl_enforced
+      - expired_entries_removed
+    max_steps: 5
+    max_retries: 3
+    requires_human: false
+
+  - id: memory_003
+    domain: memory
+    goal: Retrieve semantic context and user preferences from ChromaDB
+    expected_tool: retrieve_relevant_context
+    capability_level: 0
+    success_conditions:
+      - semantic_matches_ranked
+    max_steps: 5
+    max_retries: 3
+    requires_human: false

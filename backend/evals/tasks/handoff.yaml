@@ -1,0 +1,24 @@
+tasks:
+  - id: handoff_001
+    domain: handoff
+    goal: Trigger human handoff checkpoint upon OTP 2FA challenge
+    expected_tool: trigger_handoff
+    capability_level: 2
+    success_conditions:
+      - checkpoint_persisted
+      - handoff_event_emitted
+    max_steps: 5
+    max_retries: 3
+    requires_human: true
+
+  - id: handoff_002
+    domain: handoff
+    goal: Trigger human handoff checkpoint upon CAPTCHA challenge
+    expected_tool: trigger_handoff
+    capability_level: 2
+    success_conditions:
+      - checkpoint_persisted
+      - dom_resumed_after_solve
+    max_steps: 5
+    max_retries: 3
+    requires_human: true

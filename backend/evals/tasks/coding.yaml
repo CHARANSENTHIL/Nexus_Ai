@@ -1,0 +1,53 @@
+tasks:
+  - id: coding_001
+    domain: coding
+    goal: Search codebase AST symbols for TaskStateMachine class
+    expected_tool: search_codebase_symbols
+    tool_input:
+      symbol_name: "TaskStateMachine"
+    capability_level: 0
+    success_conditions:
+      - ast_symbol_located
+    max_steps: 10
+    max_retries: 3
+    requires_human: false
+
+  - id: coding_002
+    domain: coding
+    goal: Extract structural AST outline of policy engine module
+    expected_tool: get_file_symbol_outline
+    tool_input:
+      file_path: "backend/app/runtime/policy_engine.py"
+    capability_level: 0
+    success_conditions:
+      - function_signatures_parsed
+      - classes_identified
+    max_steps: 10
+    max_retries: 3
+    requires_human: false
+
+  - id: coding_003
+    domain: coding
+    goal: Extract function source implementation slice
+    expected_tool: get_symbol_implementation
+    tool_input:
+      symbol_name: "PolicyEngine.evaluate_action"
+    capability_level: 0
+    success_conditions:
+      - source_slice_extracted
+    max_steps: 10
+    max_retries: 3
+    requires_human: false
+
+  - id: coding_004
+    domain: coding
+    goal: Validate isolated diff patch in WorkspaceSandbox
+    expected_tool: apply_targeted_diff
+    capability_level: 1
+    success_conditions:
+      - sandbox_isolated
+      - ast_syntax_valid
+      - diff_verified
+    max_steps: 10
+    max_retries: 3
+    requires_human: false

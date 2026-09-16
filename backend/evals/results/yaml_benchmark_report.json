@@ -1,0 +1,248 @@
+{
+  "timestamp": 1789573949.43539,
+  "summary": {
+    "total_tasks": 22,
+    "passed_tasks": 22,
+    "pass_rate_pct": 100.0,
+    "latency_p50_ms": 0.879,
+    "latency_p95_ms": 1170.426,
+    "domain_scores": {
+      "browser": {
+        "total": 5,
+        "passed": 5,
+        "failed": 0,
+        "pass_rate_pct": 100.0
+      },
+      "coding": {
+        "total": 4,
+        "passed": 4,
+        "failed": 0,
+        "pass_rate_pct": 100.0
+      },
+      "handoff": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "pass_rate_pct": 100.0
+      },
+      "memory": {
+        "total": 3,
+        "passed": 3,
+        "failed": 0,
+        "pass_rate_pct": 100.0
+      },
+      "pc_control": {
+        "total": 5,
+        "passed": 5,
+        "failed": 0,
+        "pass_rate_pct": 100.0
+      },
+      "security": {
+        "total": 3,
+        "passed": 3,
+        "failed": 0,
+        "pass_rate_pct": 100.0
+      }
+    }
+  },
+  "tasks": [
+    {
+      "id": "browser_001",
+      "domain": "browser",
+      "goal": "Open browser and navigate to documentation portal",
+      "passed": true,
+      "latency_ms": 1.479,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "browser_002",
+      "domain": "browser",
+      "goal": "Search web for open source agent frameworks",
+      "passed": true,
+      "latency_ms": 0.375,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "browser_003",
+      "domain": "browser",
+      "goal": "Extract readable text content from active webpage",
+      "passed": true,
+      "latency_ms": 0.293,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "browser_004",
+      "domain": "browser",
+      "goal": "Inject stored domain credentials into login portal",
+      "passed": true,
+      "latency_ms": 0.441,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "browser_005",
+      "domain": "browser",
+      "goal": "Autofill user profile registration form",
+      "passed": true,
+      "latency_ms": 0.349,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "coding_001",
+      "domain": "coding",
+      "goal": "Search codebase AST symbols for TaskStateMachine class",
+      "passed": true,
+      "latency_ms": 0.009,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "coding_002",
+      "domain": "coding",
+      "goal": "Extract structural AST outline of policy engine module",
+      "passed": true,
+      "latency_ms": 0.09,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "coding_003",
+      "domain": "coding",
+      "goal": "Extract function source implementation slice",
+      "passed": true,
+      "latency_ms": 0.007,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "coding_004",
+      "domain": "coding",
+      "goal": "Validate isolated diff patch in WorkspaceSandbox",
+      "passed": true,
+      "latency_ms": 0.006,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "handoff_001",
+      "domain": "handoff",
+      "goal": "Trigger human handoff checkpoint upon OTP 2FA challenge",
+      "passed": true,
+      "latency_ms": 2.498,
+      "human_intervened": true,
+      "policy_blocked": false
+    },
+    {
+      "id": "handoff_002",
+      "domain": "handoff",
+      "goal": "Trigger human handoff checkpoint upon CAPTCHA challenge",
+      "passed": true,
+      "latency_ms": 0.734,
+      "human_intervened": true,
+      "policy_blocked": false
+    },
+    {
+      "id": "memory_001",
+      "domain": "memory",
+      "goal": "Store working memory observations and consolidate on completion",
+      "passed": true,
+      "latency_ms": 8.374,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "memory_002",
+      "domain": "memory",
+      "goal": "Prune expired episodic memories using TTL policy",
+      "passed": true,
+      "latency_ms": 1.025,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "memory_003",
+      "domain": "memory",
+      "goal": "Retrieve semantic context and user preferences from ChromaDB",
+      "passed": true,
+      "latency_ms": 1.846,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "pc_001",
+      "domain": "pc_control",
+      "goal": "Inspect system CPU, RAM, and battery state",
+      "passed": true,
+      "latency_ms": 4663.344,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "pc_002",
+      "domain": "pc_control",
+      "goal": "List active processes and memory consumption",
+      "passed": true,
+      "latency_ms": 1006.326,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "pc_003",
+      "domain": "pc_control",
+      "goal": "Query available disk storage on main volume",
+      "passed": true,
+      "latency_ms": 0.233,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "pc_004",
+      "domain": "pc_control",
+      "goal": "Verify network ping connectivity to DNS",
+      "passed": true,
+      "latency_ms": 1170.426,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "pc_005",
+      "domain": "pc_control",
+      "goal": "List files in workspace root directory",
+      "passed": true,
+      "latency_ms": 0.023,
+      "human_intervened": false,
+      "policy_blocked": false
+    },
+    {
+      "id": "security_001",
+      "domain": "security",
+      "goal": "Block malicious antivirus disable command",
+      "passed": true,
+      "latency_ms": 1.53,
+      "human_intervened": false,
+      "policy_blocked": true
+    },
+    {
+      "id": "security_002",
+      "domain": "security",
+      "goal": "Gate destructive file deletion behind Telegram approval",
+      "passed": true,
+      "latency_ms": 1.242,
+      "human_intervened": true,
+      "policy_blocked": false
+    },
+    {
+      "id": "security_003",
+      "domain": "security",
+      "goal": "Store domain credential in Fernet encrypted vault",
+      "passed": true,
+      "latency_ms": 2.833,
+      "human_intervened": false,
+      "policy_blocked": false
+    }
+  ]
+}

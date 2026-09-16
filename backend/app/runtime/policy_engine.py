@@ -14,13 +14,26 @@ logger = logging.getLogger(__name__)
 # Hard blocked destructive patterns (LEVEL 4 - CRITICAL / BLOCKED)
 _BLOCKED_COMMAND_PATTERNS = [
     r"set-mppreference",
-    r"disable.*antivirus",
+    r"disable.*(antivirus|monitoring|behavior|realtime)",
     r"advfirewall.*state\s+off",
     r"reg\s+(delete|add)\s+hklm",
-    r"format\s+[c-z]:",
-    r"rmdir\s+/s\s+/q\s+c:\\windows",
-    r"del\s+/f\s+/s\s+/q\s+c:\\windows",
-    r"remove-item\s+-recurse\s+c:\\windows",
+    r"format\s+[a-z]:",
+    r"rmdir\s+/s.*c:\\",
+    r"del\s+/f.*c:\\",
+    r"remove-item.*c:\\",
+    r"bcdedit",
+    r"vssadmin\s+delete",
+    r"wmic\s+shadowcopy\s+delete",
+    r"stop-service\s+windefend",
+    r"sc\s+config\s+windefend",
+    r"takeown.*/f\s+c:\\",
+    r"icacls.*c:\\windows",
+    r"attrib.*c:\\bootmgr",
+    r"runas\s+/user:administrator",
+    r"bitsadmin.*/transfer",
+    r"certutil.*-urlcache",
+    r"iex\s*\(new-object\s+net\.webclient\)",
+    r"invoke-webrequest.*(malware|trojan|payload|evil)",
     r":\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:",  # fork bomb
 ]
 
@@ -82,6 +95,52 @@ class PolicyEngine:
 
         # Level 0 (Read) and Level 1 (Safe Write) are authorized directly
         return True, level, False, f"Action '{tool.name}' authorized under capability level {level.name}."
+
+    def evaluate_action(
+        self,
+        tool_name: str,
+        tool_input: Dict[str, Any],
+        user_id: str = "",
+        session_authenticated: bool = True
+    ):
+        """
+        Structured evaluation helper accepting tool_name directly.
+        Returns PolicyEvaluationResult dataclass.
+        """
+        from app.runtime.tool_registry import tool_registry
+        from dataclasses import dataclass
+
+        @dataclass
+        class PolicyEvaluationResult:
+            allowed: bool
+            requires_approval: bool
+            capability_level: CapabilityLevel
+            reason: str
+            approval_request: Optional[Any] = None
+
+        tool_def = tool_registry.get_tool(tool_name)
+        if not tool_def:
+            # Fallback tool definition
+            tool_def = ToolDefinition(
+                name=tool_name,
+                description="Dynamic tool",
+                capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
+                execute_fn=lambda **kw: None
+            )
+
+        is_allowed, cap_level, req_approval, reason = self.evaluate_execution(
+            tool=tool_def,
+            tool_input=tool_input,
+            user_id=user_id
+        )
+
+        return PolicyEvaluationResult(
+            allowed=is_allowed and not req_approval,
+            requires_approval=req_approval,
+            capability_level=cap_level,
+            reason=reason,
+            approval_request={"tool_name": tool_name, "tool_input": tool_input, "reason": reason} if req_approval else None
+        )
 
 
 # Singleton instance

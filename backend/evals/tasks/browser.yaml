@@ -1,0 +1,63 @@
+tasks:
+  - id: browser_001
+    domain: browser
+    goal: Open browser and navigate to documentation portal
+    expected_tool: open_url
+    tool_input:
+      url: "https://example.com"
+    capability_level: 1
+    success_conditions:
+      - browser_open
+      - correct_url
+    max_steps: 10
+    max_retries: 3
+    requires_human: false
+
+  - id: browser_002
+    domain: browser
+    goal: Search web for open source agent frameworks
+    expected_tool: search_web
+    tool_input:
+      query: "open source AI agents 2026"
+    capability_level: 0
+    success_conditions:
+      - search_results_returned
+    max_steps: 10
+    max_retries: 3
+    requires_human: false
+
+  - id: browser_003
+    domain: browser
+    goal: Extract readable text content from active webpage
+    expected_tool: read_page
+    capability_level: 0
+    success_conditions:
+      - text_content_extracted
+    max_steps: 10
+    max_retries: 3
+    requires_human: false
+
+  - id: browser_004
+    domain: browser
+    goal: Inject stored domain credentials into login portal
+    expected_tool: inject_domain_credentials
+    tool_input:
+      domain: "github.com"
+    capability_level: 2
+    success_conditions:
+      - vault_secret_retrieved
+      - injected_without_prompt_leak
+    max_steps: 10
+    max_retries: 3
+    requires_human: false
+
+  - id: browser_005
+    domain: browser
+    goal: Autofill user profile registration form
+    expected_tool: autofill_profile_form
+    capability_level: 2
+    success_conditions:
+      - profile_fields_filled
+    max_steps: 10
+    max_retries: 3
+    requires_human: false
