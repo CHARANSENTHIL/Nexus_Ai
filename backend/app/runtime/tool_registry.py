@@ -174,6 +174,55 @@ class ToolRegistry:
             execute_fn=get_page_text.func,
             verification_strategy="general",
         ))
+        self.register_tool(ToolDefinition(
+            name="get_file_hash",
+            description="Calculate SHA256 or MD5 hash of a file",
+            capability_level=CapabilityLevel.LEVEL_0_READ,
+            execute_fn=get_file_hash.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="find_error_on_screen",
+            description="Locate errors or dialogs on screen via vision/OCR",
+            capability_level=CapabilityLevel.LEVEL_0_READ,
+            execute_fn=find_error_on_screen.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="analyze_desktop",
+            description="Analyze desktop UI elements and windows",
+            capability_level=CapabilityLevel.LEVEL_0_READ,
+            execute_fn=analyze_desktop.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="get_vision_status",
+            description="Get vision system readiness and screen metrics",
+            capability_level=CapabilityLevel.LEVEL_0_READ,
+            execute_fn=get_vision_status.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="analyze_document",
+            description="Analyze document content and structure",
+            capability_level=CapabilityLevel.LEVEL_0_READ,
+            execute_fn=analyze_document.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="query_document",
+            description="Query document for specific information",
+            capability_level=CapabilityLevel.LEVEL_0_READ,
+            execute_fn=query_document.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="get_market_analysis",
+            description="Fetch financial market analysis and quotes",
+            capability_level=CapabilityLevel.LEVEL_0_READ,
+            execute_fn=get_market_analysis.func,
+            verification_strategy="general",
+        ))
 
         # ── LEVEL 1: SAFE WRITE TOOLS ─────────────────────────────────────────
         self.register_tool(ToolDefinition(
@@ -263,8 +312,9 @@ class ToolRegistry:
         self.register_tool(ToolDefinition(
             name="apply_targeted_diff",
             description="Apply AST-validated diff patch to file",
-            capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
+            capability_level=CapabilityLevel.LEVEL_3_DESTRUCTIVE,
             execute_fn=apply_targeted_diff.func,
+            requires_approval=True,
             verification_strategy="code_syntax",
         ))
         self.register_tool(ToolDefinition(
@@ -287,6 +337,41 @@ class ToolRegistry:
             capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
             execute_fn=organize_downloads.func,
             verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="set_system_volume",
+            description="Set Windows master audio volume level (0-100)",
+            capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
+            execute_fn=set_system_volume.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="set_system_brightness",
+            description="Adjust display brightness level (0-100)",
+            capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
+            execute_fn=set_system_brightness.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="close_application",
+            description="Gracefully close an open application window",
+            capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
+            execute_fn=close_application.func,
+            verification_strategy="general",
+        ))
+        self.register_tool(ToolDefinition(
+            name="rename_file",
+            description="Rename a file or folder",
+            capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
+            execute_fn=rename_file.func,
+            verification_strategy="file_exists",
+        ))
+        self.register_tool(ToolDefinition(
+            name="compress_files",
+            description="Create zip archive from files/folders",
+            capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
+            execute_fn=compress_files.func,
+            verification_strategy="file_exists",
         ))
 
         # ── LEVEL 2: SENSITIVE TOOLS ──────────────────────────────────────────
@@ -319,6 +404,14 @@ class ToolRegistry:
             execute_fn=run_autonomous_browser_workflow.func,
             verification_strategy="general",
         ))
+        self.register_tool(ToolDefinition(
+            name="test_and_repair_codebase",
+            description="Run test suite and attempt automated AST fixes",
+            capability_level=CapabilityLevel.LEVEL_2_SENSITIVE,
+            execute_fn=test_and_repair_codebase.func,
+            requires_approval=True,
+            verification_strategy="general",
+        ))
 
         # ── LEVEL 3: DESTRUCTIVE TOOLS ────────────────────────────────────────
         self.register_tool(ToolDefinition(
@@ -336,6 +429,14 @@ class ToolRegistry:
             execute_fn=kill_process.func,
             requires_approval=True,
             verification_strategy="process_killed",
+        ))
+        self.register_tool(ToolDefinition(
+            name="set_system_power",
+            description="Put system to sleep, hibernate, or lock screen",
+            capability_level=CapabilityLevel.LEVEL_3_DESTRUCTIVE,
+            execute_fn=set_system_power.func,
+            requires_approval=True,
+            verification_strategy="general",
         ))
         self.register_tool(ToolDefinition(
             name="run_shell_command",
