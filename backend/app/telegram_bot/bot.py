@@ -224,7 +224,20 @@ def is_conversational_chat(text: str) -> bool:
 
 # ── Helper: Execute tool subtasks and send results ────────────────────────────
 async def _execute_subtasks(bot, chat_id, context, user, text, subtasks: list):
-    """Execute a list of subtasks from keyword router or classifier directly."""
+    """Execute requested Telegram work through the central secure runtime."""
+    from app.runtime.nexus_runtime import nexus_runtime
+
+    task = await nexus_runtime.execute_goal(
+        text,
+        user_id=str(user.id),
+        metadata={"source": "telegram", "requested_subtasks": len(subtasks)},
+    )
+    output = task.final_output or task.error_summary or "The requested action was not completed."
+    await send_progress(bot, chat_id, output)
+
+
+async def _execute_subtasks_legacy(bot, chat_id, context, user, text, subtasks: list):
+    """Deprecated direct executor retained only while Telegram result rendering is migrated."""
     planner = _get_planner()
 
     for subtask in subtasks:
@@ -548,7 +561,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE, tex
                                 logger.warning(f"Failed to send blender project file: {bfe}")
             else:
                 err = result.get("final_output", "Task failed.")
-                await send_progress(context.bot, chat_id, f"❌ *Task Failed*\n\n{err}")
+                status = result.get("status", "FAILED")
+                if status == "BLOCKED":
+                    await send_progress(context.bot, chat_id, f"🛡️ *Action Blocked by Security Policy*\n\n{err}")
+                else:
+                    await send_progress(context.bot, chat_id, f"❌ *Task Failed*\n\n{err}")
             return
         except Exception as eb_err:
             logger.error(f"[BOT] Event-driven handler failed: {eb_err}", exc_info=True)
@@ -756,10 +773,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE, tex
             f"⚙️ *LangGraph Orchestrator Activated*\nRouting task through StateGraph nodes..."
         )
 
-        from app.agents.langgraph_orchestrator import execute_nexus_graph
-        graph_res = await execute_nexus_graph(text, user_id=str(user.id))
+        from app.runtime.nexus_runtime import nexus_runtime
+        runtime_task = await nexus_runtime.execute_goal(
+            text,
+            user_id=str(user.id),
+            metadata={"source": "telegram"},
+        )
 
-        final_output = graph_res.get("final_output", "✅ Executed via LangGraph.")
+        final_output = runtime_task.final_output or runtime_task.error_summary or "The requested action was not completed."
         await send_progress(context.bot, chat_id, final_output)
 
         # Send latest screenshot if available
@@ -1180,7 +1201,5 @@ def build_telegram_app(token: str) -> Application:
     from app.handoff.handoff_engine import handoff_engine
     handoff_engine.register_notifier(send_handoff_notification)
     return app
-
-
 
 

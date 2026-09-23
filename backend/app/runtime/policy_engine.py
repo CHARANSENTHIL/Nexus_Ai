@@ -84,6 +84,13 @@ class PolicyEngine:
                     level = max(level, CapabilityLevel.LEVEL_3_DESTRUCTIVE)
 
         # 2. Check tool-specific capability requirements
+        if tool.name == "set_system_power":
+            power_act = str(tool_input.get("action", "")).lower()
+            if power_act in ("sleep", "lock"):
+                return True, CapabilityLevel.LEVEL_1_SAFE_WRITE, False, f"Power action '{power_act}' authorized under LEVEL_1_SAFE_WRITE."
+            else:
+                return True, CapabilityLevel.LEVEL_3_DESTRUCTIVE, True, f"Destructive power action '{power_act}' requires explicit human approval."
+
         if level >= CapabilityLevel.LEVEL_4_PRIVILEGED:
             return False, CapabilityLevel.LEVEL_4_PRIVILEGED, True, "Privileged action requires explicit administrator authorization."
 
@@ -120,12 +127,11 @@ class PolicyEngine:
 
         tool_def = tool_registry.get_tool(tool_name)
         if not tool_def:
-            # Fallback tool definition
-            tool_def = ToolDefinition(
-                name=tool_name,
-                description="Dynamic tool",
-                capability_level=CapabilityLevel.LEVEL_1_SAFE_WRITE,
-                execute_fn=lambda **kw: None
+            return PolicyEvaluationResult(
+                allowed=False,
+                requires_approval=False,
+                capability_level=CapabilityLevel.LEVEL_4_PRIVILEGED,
+                reason=f"Tool '{tool_name}' is not registered and is blocked by default.",
             )
 
         is_allowed, cap_level, req_approval, reason = self.evaluate_execution(

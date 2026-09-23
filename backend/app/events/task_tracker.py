@@ -164,9 +164,9 @@ class TaskTracker:
                     )
 
             elif et in (EventType.TASK_FAILED, EventType.ACTION_BLOCKED):
-                task["status"] = "FAILED"
+                task["status"] = "BLOCKED" if et == EventType.ACTION_BLOCKED else "FAILED"
                 task["success"] = False
-                task["final_output"] = event.payload.get("error", "Task execution failed or blocked.")
+                task["final_output"] = event.payload.get("reason") or event.payload.get("error") or "Task execution failed or blocked."
                 if task_id in self._completion_events:
                     self._completion_events[task_id].set()
 
